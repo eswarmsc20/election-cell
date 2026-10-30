@@ -11,16 +11,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <!-- Leaflet CSS & JS -->
+    <!-- Leaflet CSS & JS (Deferred for fast mobile rendering) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Leaflet Omnivore & JSZip for KMZ extraction -->
-    <script src="https://unpkg.com/@mapbox/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Chart.js for Executive Dashboard -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS for Excel Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <style>
         .ps-tooltip-badge {
@@ -60,21 +53,14 @@
             background: transparent !important;
             border: none !important;
         }
-        /* Refined, Elegant Golden Rim Spark for Official Police Logos */
-        @keyframes logoSparkGlow {
-            0%, 100% {
-                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 3px rgba(245, 158, 11, 0.55));
-            }
-            50% {
-                filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 7px rgba(251, 191, 36, 0.75)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.6));
-            }
-        }
+        /* Clean, Elegant Golden Rim Shadow for Official Police Logos */
         .police-logo-spark {
-            animation: logoSparkGlow 3.5s ease-in-out infinite;
-            transition: transform 0.25s ease;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 3px rgba(245, 158, 11, 0.55));
+            transition: transform 0.25s ease, filter 0.25s ease;
         }
         .police-logo-spark:hover {
-            transform: scale(1.05);
+            transform: scale(1.04);
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 7px rgba(251, 191, 36, 0.75));
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar {
@@ -1014,7 +1000,7 @@
 
     <!-- Load Local Stations Dataset & Precomputed Road Routes Geometry -->
     <script src="data/stations.js"></script>
-    <script src="data/routes_geometry.js"></script>
+    <script defer src="data/routes_geometry.js"></script>
 
     <!-- Main Application JavaScript Logic -->
     <script>
@@ -1027,8 +1013,6 @@
         let mainRoutesGroup = null;
         let currentMapFilterToken = 0;
         let mandalBoundariesLayer = null;
-        let sensitivityChartInstance = null;
-        let psVulnerabilityChartInstance = null;
         
         // Table pagination state
         let tableCurrentPage = 1;
@@ -1059,23 +1043,16 @@
                     if (typeof closeModal === 'function') closeModal();
                 }
             });
-
-            // Lazy background map pre-initialization during browser idle time
-            // So that the initial page opens INSTANTLY in the blink of an eye!
-            const triggerIdleInit = () => {
-                if (!isMainMapInitialized) {
-                    initMainMapLazy();
-                }
-            };
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(triggerIdleInit, { timeout: 1200 });
-            } else {
-                setTimeout(triggerIdleInit, 400);
-            }
+            // Main Map is initialized strictly on-demand when the user clicks the "Live Route Map" tab!
+            // This guarantees instant, lightning-fast loading on mobile phones without thread lockup.
         });
 
         function initMainMapLazy() {
             if (isMainMapInitialized) return;
+            if (typeof L === 'undefined') {
+                setTimeout(initMainMapLazy, 80);
+                return;
+            }
             isMainMapInitialized = true;
             initMainMap();
         }
@@ -1173,27 +1150,21 @@
             const tablePsSelect = document.getElementById('table-filter-ps');
             const routeTabPsSelect = document.getElementById('route-tab-psname');
 
-            mapPsSelect.innerHTML = '<option value="">-- All Police Stations --</option>';
-            tablePsSelect.innerHTML = '<option value="">-- All Police Stations --</option>';
-            routeTabPsSelect.innerHTML = '<option value="">-- సెలెక్ట్ పోలీస్ స్టేషన్ --</option>';
-
-            sortedPS.forEach(ps => {
-                mapPsSelect.innerHTML += `<option value="${ps}">${ps}</option>`;
-                tablePsSelect.innerHTML += `<option value="${ps}">${ps}</option>`;
-                routeTabPsSelect.innerHTML += `<option value="${ps}">${ps}</option>`;
-            });
+            // Batch generate options
+            const psOptions = sortedPS.map(ps => `<option value="${ps}">${ps}</option>`).join('');
+            if (mapPsSelect) mapPsSelect.innerHTML = '<option value="">-- All Police Stations --</option>' + psOptions;
+            if (tablePsSelect) tablePsSelect.innerHTML = '<option value="">-- All Police Stations --</option>' + psOptions;
+            if (routeTabPsSelect) routeTabPsSelect.innerHTML = '<option value="">-- సెలెక్ట్ పోలీస్ స్టేషన్ --</option>' + psOptions;
 
             // Populate Table Routes
             const tableRouteSelect = document.getElementById('table-filter-route');
-            tableRouteSelect.innerHTML = '<option value="">-- All Routes --</option>';
-            sortedRoutes.forEach(r => {
-                tableRouteSelect.innerHTML += `<option value="${r}">Route - ${r}</option>`;
-            });
+            if (tableRouteSelect) {
+                tableRouteSelect.innerHTML = '<option value="">-- All Routes --</option>' + sortedRoutes.map(r => `<option value="${r}">Route - ${r}</option>`).join('');
+            }
 
             // Populate Location & Village Datalist for Search Autocomplete
             const datalist = document.getElementById('all-locations-datalist');
             if (datalist) {
-                datalist.innerHTML = '';
                 const locMap = new Map();
                 const villageSet = new Set();
                 
@@ -1215,15 +1186,15 @@
                     }
                 });
 
-                // Add unique village names first
+                // Batch build datalist options in memory
+                let dlHtml = '';
                 Array.from(villageSet).sort().forEach(v => {
-                    datalist.innerHTML += `<option value="${v}">${v} (Village)</option>`;
+                    dlHtml += `<option value="${v}">${v} (Village)</option>`;
                 });
-
-                // Add full station locations with PS and distance
                 Array.from(locMap.keys()).sort().forEach(loc => {
-                    datalist.innerHTML += `<option value="${loc}">${loc} [From: ${locMap.get(loc)}]</option>`;
+                    dlHtml += `<option value="${loc}">${loc} [From: ${locMap.get(loc)}]</option>`;
                 });
+                datalist.innerHTML = dlHtml;
             }
         }
 
@@ -1308,6 +1279,7 @@
             let totStations = 0, totNormal = 0, totSens = 0, totCrit = 0, totHyp = 0, totRoutes = 0, totVoters = 0;
             let countShown = 0;
 
+            let rowsHtml = '';
             sorted.forEach(ps => {
                 const info = currentPsMap[ps];
                 totStations += info.total;
@@ -1321,7 +1293,7 @@
                 if (q && !ps.toLowerCase().includes(q)) return;
                 countShown++;
 
-                tbody.innerHTML += `
+                rowsHtml += `
                     <tr class="hover:bg-blue-50/70 border-b border-slate-100 transition">
                         <td class="p-2.5 font-bold text-slate-900">${ps}</td>
                         <td class="p-2.5 text-center font-bold text-slate-800">${info.total}</td>
@@ -1339,6 +1311,7 @@
                     </tr>
                 `;
             });
+            tbody.innerHTML = rowsHtml;
 
             const countEl = document.getElementById('dash-matrix-ps-count');
             if (countEl) countEl.innerText = `${countShown} Police Stations`;
@@ -1431,44 +1404,68 @@
             applyMapFilters();
         }
 
-        function loadMandalBoundaries() {
-            setTimeout(() => {
-                fetch('BORDERSKL-Mandals.kmz')
-                    .then(res => {
-                        if (!res.ok) throw new Error('KMZ not found');
-                        return res.arrayBuffer();
-                    })
-                    .then(data => JSZip.loadAsync(data))
-                    .then(zip => {
-                        const kmlFileName = Object.keys(zip.files).find(name => name.toLowerCase().endsWith('.kml'));
-                        if (kmlFileName) {
-                            return zip.files[kmlFileName].async('string');
-                        }
-                        throw new Error('No KML inside KMZ');
-                    })
-                    .then(kmlText => {
-                        mandalBoundariesLayer = omnivore.kml.parse(kmlText, null, L.geoJson(null, {
-                            style: function() {
-                                return { color: "#2563eb", weight: 2, opacity: 0.85, fillOpacity: 0.08, interactive: false };
-                            },
-                            onEachFeature: function(feature, layer) {
-                                layer.options.interactive = false;
-                            }
-                        }));
-                        if (mainMap && document.getElementById('map-toggle-borders')?.checked) {
-                            mandalBoundariesLayer.addTo(mainMap);
-                        }
-                    })
-                    .catch(err => {
-                        console.warn('Could not load KMZ boundary file:', err);
+        let isLoadingBorders = false;
+        async function loadMandalBoundaries() {
+            if (mandalBoundariesLayer || isLoadingBorders) return;
+            const toggle = document.getElementById('map-toggle-borders');
+            if (toggle && !toggle.checked) return;
+
+            isLoadingBorders = true;
+            try {
+                // Dynamically ensure JSZip and omnivore are loaded
+                const loadScript = (url, check) => {
+                    if (check()) return Promise.resolve();
+                    return new Promise((resolve, reject) => {
+                        const s = document.createElement('script');
+                        s.src = url;
+                        s.onload = resolve;
+                        s.onerror = reject;
+                        document.head.appendChild(s);
                     });
-            }, 400);
+                };
+
+                await Promise.all([
+                    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', () => typeof JSZip !== 'undefined'),
+                    loadScript('https://unpkg.com/@mapbox/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js', () => typeof omnivore !== 'undefined')
+                ]);
+
+                const res = await fetch('BORDERSKL-Mandals.kmz');
+                if (!res.ok) throw new Error('KMZ not found');
+                const data = await res.arrayBuffer();
+                const zip = await JSZip.loadAsync(data);
+                const kmlFileName = Object.keys(zip.files).find(name => name.toLowerCase().endsWith('.kml'));
+                if (!kmlFileName) throw new Error('No KML inside KMZ');
+                const kmlText = await zip.files[kmlFileName].async('string');
+
+                mandalBoundariesLayer = omnivore.kml.parse(kmlText, null, L.geoJson(null, {
+                    style: function() {
+                        return { color: "#2563eb", weight: 2, opacity: 0.85, fillOpacity: 0.08, interactive: false };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        layer.options.interactive = false;
+                    }
+                }));
+
+                if (mainMap && document.getElementById('map-toggle-borders')?.checked) {
+                    mandalBoundariesLayer.addTo(mainMap);
+                }
+            } catch (err) {
+                console.warn('Could not load KMZ boundary file:', err);
+            } finally {
+                isLoadingBorders = false;
+            }
         }
 
         function toggleBorders(show) {
-            if (!mandalBoundariesLayer || !mainMap) return;
-            if (show) mainMap.addLayer(mandalBoundariesLayer);
-            else mainMap.removeLayer(mandalBoundariesLayer);
+            if (!show) {
+                if (mandalBoundariesLayer && mainMap) mainMap.removeLayer(mandalBoundariesLayer);
+            } else {
+                if (mandalBoundariesLayer && mainMap) {
+                    mainMap.addLayer(mandalBoundariesLayer);
+                } else {
+                    loadMandalBoundaries();
+                }
+            }
         }
 
         function toggleRoadRoutes(show) {
@@ -1479,17 +1476,17 @@
 
         function onMapPSChange(psname) {
             const routeSelect = document.getElementById('map-filter-route');
-            routeSelect.innerHTML = '<option value="">-- All Routes --</option>';
+            if (!routeSelect) return;
 
+            let optsHtml = '<option value="">-- All Routes --</option>';
             if (psname) {
                 const routesInPS = new Set();
                 allStations.filter(s => (s.psname || '').trim() === psname.trim()).forEach(s => {
                     if (s.route_no) routesInPS.add(s.route_no.trim());
                 });
-                Array.from(routesInPS).sort().forEach(r => {
-                    routeSelect.innerHTML += `<option value="${r}">Route - ${r}</option>`;
-                });
+                optsHtml += Array.from(routesInPS).sort().map(r => `<option value="${r}">Route - ${r}</option>`).join('');
             }
+            routeSelect.innerHTML = optsHtml;
 
             applyMapFilters();
         }
@@ -1559,6 +1556,9 @@
             const routeStaffInfo = {};
             const bounds = [];
 
+            const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const shouldBindTooltip = !isTouchDevice || filteredMapStations.length <= 120;
+
             filteredMapStations.forEach((s) => {
                 const lat = parseFloat(s.latitude);
                 const lng = parseFloat(s.longitude);
@@ -1573,10 +1573,12 @@
                     const marker = L.marker(latLng, { icon: markerIcon });
                     mainMarkersGroup.addLayer(marker);
 
-                    // Tooltip
-                    const locName = s.polling_station_location || `PS Code ${s.code || ''}`;
-                    const shortName = locName.length > 25 ? locName.substring(0, 25) + '...' : locName;
-                    marker.bindTooltip(shortName, { direction: 'top', className: 'ps-tooltip-badge', offset: [0, -18] });
+                    // Tooltip (Only on desktop or when filtered to a reasonable number to preserve mobile speed)
+                    if (shouldBindTooltip) {
+                        const locName = s.polling_station_location || `PS Code ${s.code || ''}`;
+                        const shortName = locName.length > 25 ? locName.substring(0, 25) + '...' : locName;
+                        marker.bindTooltip(shortName, { direction: 'top', className: 'ps-tooltip-badge', offset: [0, -18] });
+                    }
 
                     // Lazy Popup Content (created on-demand when marker is clicked)
                     marker.bindPopup(() => buildStationPopupHtml(s), { maxWidth: 330 });
@@ -1683,11 +1685,12 @@
             else if (cat === 'SENSITIVE') letter = 'S';
             else letter = 'N';
 
-            // Alert pulse animation for Hyper Sensitive
-            const pulseHtml = isHyper ? `<div style="position:absolute; top:-2px; left:-2px; width:38px; height:38px; border-radius:50%; background:#e11d48; opacity:0.35; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : '';
+            // Alert pulse animation for Hyper Sensitive (only when zoomed or filtered to prevent mobile CPU overload)
+            const shouldPulse = isHyper && (filteredMapStations.length <= 100);
+            const pulseHtml = shouldPulse ? `<div style="position:absolute; top:-2px; left:-2px; width:38px; height:38px; border-radius:50%; background:#e11d48; opacity:0.35; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : '';
 
             const html = `
-                <div style="position: relative; width: 34px; height: 44px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); cursor: pointer; text-align: center;">
+                <div style="position: relative; width: 34px; height: 44px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); cursor: pointer; text-align: center;">
                     ${pulseHtml}
                     <svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M17 0C7.61116 0 0 7.61116 0 17C0 27.5 14.5 40.5 16.1 41.9C16.6 42.3 17.4 42.3 17.9 41.9C19.5 40.5 34 27.5 34 17C34 7.61116 26.3888 0 17 0Z" fill="${pinColor}" stroke="#ffffff" stroke-width="2.5"/>
@@ -2263,6 +2266,7 @@
                 return;
             }
 
+            let cardsHtml = '';
             filteredKeys.forEach(k => {
                 const info = routeMap[k];
                 let totalVoters = 0;
@@ -2274,7 +2278,7 @@
                     </span>
                 `).join(' ');
 
-                container.innerHTML += `
+                cardsHtml += `
                     <div class="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-lg border border-slate-200 hover:border-blue-300 transition shadow-xs flex flex-col gap-2">
                         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-1.5">
                             <div class="flex items-center gap-2">
@@ -2301,6 +2305,7 @@
                     </div>
                 `;
             });
+            container.innerHTML = cardsHtml;
         }
 
         function selectAndZoomRoute(psName, routeNo) {
@@ -2537,11 +2542,12 @@
                 : 'No records found';
 
             const tbody = document.getElementById('master-table-tbody');
-            tbody.innerHTML = '';
+            if (!tbody) return;
 
             if (pageData.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="18" class="p-8 text-center text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2"></i><br>ఎలాంటి రికార్డులు కనుగొనబడలేదు (No matching records found).</td></tr>`;
             } else {
+                let rowsHtml = '';
                 pageData.forEach((s, idx) => {
                     const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
                     const badgeClass = SENSITIVITY_COLORS[cat]?.badge || 'bg-slate-100 text-slate-800';
@@ -2550,7 +2556,7 @@
                     const formattedRouteStaff = formatPhoneLinks(s.route_staff);
                     const formattedBlo = formatPhoneLinks(s.blo_contact_no);
 
-                    tbody.innerHTML += `
+                    rowsHtml += `
                         <tr class="hover:bg-blue-50/50 border-b border-slate-100 transition-colors align-middle">
                             <td class="p-2 text-center text-slate-500 font-bold col-sno">${startIdx + idx + 1}</td>
                             <td class="p-2 text-slate-500 font-mono col-id font-bold">${s.id}</td>
@@ -2615,6 +2621,7 @@
                         </tr>
                     `;
                 });
+                tbody.innerHTML = rowsHtml;
             }
 
             renderPaginationButtons(totalPages);
@@ -2623,19 +2630,17 @@
 
         function renderPaginationButtons(totalPages) {
             const container = document.getElementById('table-pagination-btns');
-            container.innerHTML = '';
+            if (!container) return;
 
-            if (totalPages <= 1) return;
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
 
-            // First Page
-            container.innerHTML += `
+            let btnsHtml = `
                 <button onclick="goToTablePage(1)" ${tableCurrentPage === 1 ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="First Page"'}>
                     <i class="fa-solid fa-angles-left"></i>
                 </button>
-            `;
-
-            // Prev
-            container.innerHTML += `
                 <button onclick="goToTablePage(${tableCurrentPage - 1})" ${tableCurrentPage === 1 ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="Previous Page"'}>
                     <i class="fa-solid fa-chevron-left"></i>
                 </button>
@@ -2645,26 +2650,23 @@
             let endP = Math.min(totalPages, tableCurrentPage + 2);
 
             for (let i = startP; i <= endP; i++) {
-                container.innerHTML += `
+                btnsHtml += `
                     <button onclick="goToTablePage(${i})" class="px-2.5 py-1 rounded border font-semibold ${i === tableCurrentPage ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-sm' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}">
                         ${i}
                     </button>
                 `;
             }
 
-            // Next
-            container.innerHTML += `
+            btnsHtml += `
                 <button onclick="goToTablePage(${tableCurrentPage + 1})" ${tableCurrentPage === totalPages ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="Next Page"'}>
                     <i class="fa-solid fa-chevron-right"></i>
                 </button>
-            `;
-
-            // Last Page
-            container.innerHTML += `
                 <button onclick="goToTablePage(${totalPages})" ${tableCurrentPage === totalPages ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="Last Page"'}>
                     <i class="fa-solid fa-angles-right"></i>
                 </button>
             `;
+
+            container.innerHTML = btnsHtml;
         }
 
         function goToTablePage(p) {
@@ -2694,6 +2696,10 @@
 
         // ================= TAB 4: PS ROUTE WISE TRACKING =================
         function initRouteMap() {
+            if (typeof L === 'undefined') {
+                setTimeout(initRouteMap, 80);
+                return;
+            }
             if (!routeMap) {
                 routeMap = L.map('route-map').setView([18.3, 83.9], 10);
                 const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -2718,17 +2724,17 @@
 
         function onRouteTabPSChange(psname) {
             const routeSelect = document.getElementById('route-tab-routeno');
-            routeSelect.innerHTML = '<option value="">-- సెలెక్ట్ Route No --</option>';
+            if (!routeSelect) return;
+            let opts = '<option value="">-- సెలెక్ట్ Route No --</option>';
 
             if (psname) {
                 const routesInPS = new Set();
                 allStations.filter(s => (s.psname || '').trim() === psname.trim()).forEach(s => {
                     if (s.route_no) routesInPS.add(s.route_no.trim());
                 });
-                Array.from(routesInPS).sort().forEach(r => {
-                    routeSelect.innerHTML += `<option value="${r}">రూట్ - ${r}</option>`;
-                });
+                opts += Array.from(routesInPS).sort().map(r => `<option value="${r}">రూట్ - ${r}</option>`).join('');
             }
+            routeSelect.innerHTML = opts;
         }
 
         function panRouteMapTo(lat, lng, idx) {
@@ -2811,6 +2817,7 @@
                 return;
             }
 
+            let listHtml = '';
             displayStations.forEach((s, idx) => {
                 const lat = parseFloat(s.latitude);
                 const lng = parseFloat(s.longitude);
@@ -2831,7 +2838,7 @@
                     marker.bindTooltip(`Station #${idx+1} [${cat}]: ${loc}`, { permanent: false, direction: 'top', className: 'ps-tooltip-badge' });
                 }
 
-                listContainer.innerHTML += `
+                listHtml += `
                     <div onclick="panRouteMapTo(${lat}, ${lng}, ${idx + 1})" class="p-2.5 rounded-lg border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md transition cursor-pointer flex items-start gap-2.5 shadow-sm">
                         <div class="w-7 h-7 rounded-full ${circleBg} flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
                             ${idx + 1}
@@ -2855,6 +2862,7 @@
                     </div>
                 `;
             });
+            listContainer.innerHTML = listHtml;
 
             // Check precomputed real road driving geometry first for instant loading
             const rKey = `${selectedPS}_${selectedRoute}`;
@@ -3068,7 +3076,27 @@
             alert('డేటా విజయవంతంగా రీసెట్ చేయబడింది.');
         }
 
-        function exportToExcel() {
+        async function exportToExcel() {
+            if (typeof XLSX === 'undefined') {
+                const btn = event?.currentTarget;
+                const origHtml = btn ? btn.innerHTML : '';
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Loading Excel...';
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error('Excel library network error'));
+                        document.head.appendChild(script);
+                    });
+                } catch (err) {
+                    alert('Excel లైబ్రరీ లోడ్ చేయడంలో లోపం ఏర్పడింది: ' + err.message);
+                    if (btn) btn.innerHTML = origHtml;
+                    return;
+                }
+                if (btn) btn.innerHTML = origHtml;
+            }
+
             const exportData = (tableFilteredStations && tableFilteredStations.length > 0 ? tableFilteredStations : allStations).map((s, idx) => ({
                 "S.No": idx + 1,
                 "ID": s.id || '',
