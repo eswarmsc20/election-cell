@@ -76,53 +76,73 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans antialiased text-xs min-h-screen flex flex-col">
 
-    <!-- Top Navigation Header -->
-    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-[1100]">
-        <div class="max-w-7xl mx-auto px-3 py-2 flex flex-wrap justify-between items-center gap-2">
+    <!-- Top Official Police Navigation Header -->
+    <header class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white shadow-xl sticky top-0 z-[1100] border-b border-blue-900/40">
+        <div class="max-w-[1780px] w-full mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap justify-between items-center gap-3">
             
-            <!-- Brand / Title -->
-            <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md">
-                    <i class="fa-solid fa-shield-halved text-base"></i>
-                </div>
-                <div>
+            <!-- Official Police Department Header with Dual Logos -->
+            <div class="flex items-center gap-2.5 sm:gap-4">
+                <!-- AP Police Official Logo -->
+                <img src="ap_police_logo.png" alt="Andhra Pradesh Police Logo" class="h-12 sm:h-14 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform" />
+
+                <!-- Vertical Divider -->
+                <div class="h-10 sm:h-12 w-[1.5px] bg-amber-500/50 hidden sm:block"></div>
+
+                <!-- Official Department Titles -->
+                <div class="text-left">
                     <div class="flex items-center gap-2">
-                        <h1 class="text-sm font-bold tracking-wide uppercase">Police Election Cell Administration</h1>
-                        <span class="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded text-[10px] tracking-tight">LIVE SYSTEM</span>
+                        <span class="text-[11px] sm:text-xs font-black uppercase tracking-widest text-amber-400 drop-shadow-sm">
+                            GOVERNMENT OF ANDHRA PRADESH
+                        </span>
+                        <span class="bg-red-600 text-white font-extrabold px-1.5 py-0.2 rounded text-[9px] tracking-wide uppercase shadow-sm">
+                            LIVE SYSTEM
+                        </span>
                     </div>
-                    <p class="text-[10px] text-slate-400">Routes, Polling Stations & Force Deployment Tracking</p>
+                    <h1 class="text-base sm:text-lg lg:text-xl font-black text-white tracking-wide leading-tight flex items-center gap-2">
+                        <span>SRIKAKULAM DISTRICT POLICE</span>
+                        <span class="text-xs sm:text-sm font-bold text-blue-300 hidden md:inline">| శ్రీకాకుళం జిల్లా పోలీస్</span>
+                    </h1>
+                    <p class="text-[10px] sm:text-[11px] text-slate-300 font-semibold tracking-tight">
+                        POLICE ELECTION CELL &bull; ROUTE & SENSITIVITY MANAGEMENT SYSTEM
+                    </p>
                 </div>
+
+                <!-- Vertical Divider -->
+                <div class="h-10 sm:h-12 w-[1.5px] bg-amber-500/50 hidden sm:block"></div>
+
+                <!-- Srikakulam District Police Logo -->
+                <img src="srikakulam_police_logo.png" alt="Srikakulam District Police Logo" class="h-12 sm:h-14 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform" />
             </div>
 
-            <!-- Tab Buttons -->
-            <div class="flex flex-wrap items-center gap-1.5">
-                <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-2.5 py-1.5 rounded font-semibold text-[11px] bg-blue-600 text-white transition flex items-center gap-1.5 shadow-sm">
+            <!-- Tab Navigation Buttons & Actions -->
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-blue-600 text-white transition flex items-center gap-1.5 shadow-md">
                     <i class="fa-solid fa-chart-pie"></i> Dashboard
                 </button>
-                <button onclick="switchTab('map')" id="tab-btn-map" class="px-2.5 py-1.5 rounded font-medium text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-map-location-dot"></i> Live Route Map
+                <button onclick="switchTab('map')" id="tab-btn-map" class="px-3 py-1.5 rounded-lg font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 border border-slate-700/60">
+                    <i class="fa-solid fa-map-location-dot text-amber-400"></i> Live Route Map
                 </button>
-                <button onclick="switchTab('report')" id="tab-btn-report" class="px-2.5 py-1.5 rounded font-medium text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-table-list"></i> Polling Stations Report
+                <button onclick="switchTab('report')" id="tab-btn-report" class="px-3 py-1.5 rounded-lg font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 border border-slate-700/60">
+                    <i class="fa-solid fa-table-list text-cyan-400"></i> Polling Stations Report
                 </button>
-                <button onclick="switchTab('routewise')" id="tab-btn-routewise" class="px-2.5 py-1.5 rounded font-medium text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-route"></i> PS Route Wise
+                <button onclick="switchTab('routewise')" id="tab-btn-routewise" class="px-3 py-1.5 rounded-lg font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 border border-slate-700/60">
+                    <i class="fa-solid fa-route text-emerald-400"></i> PS Route Wise
                 </button>
-                <button onclick="openAddModal()" class="px-2.5 py-1.5 rounded font-semibold text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 shadow-sm">
+                <button onclick="openAddModal()" class="px-3 py-1.5 rounded-lg font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 shadow-sm">
                     <i class="fa-solid fa-plus"></i> Add PS
                 </button>
-                <button onclick="exportToExcel()" class="px-2 py-1.5 rounded text-[11px] bg-teal-700 hover:bg-teal-600 text-white transition flex items-center gap-1" title="Download Excel Report">
+                <button onclick="exportToExcel()" class="px-2.5 py-1.5 rounded-lg text-xs bg-teal-700 hover:bg-teal-600 text-white transition flex items-center gap-1.5 shadow-sm" title="Download Excel Report">
                     <i class="fa-solid fa-file-excel"></i> Excel
                 </button>
-                <button onclick="openDataModal()" class="px-2 py-1.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Data Backup / Restore">
+                <button onclick="openDataModal()" class="px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition border border-slate-700/60" title="Data Backup / Restore">
                     <i class="fa-solid fa-database"></i>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- MAIN BODY CONTAINER -->
-    <main class="flex-1 w-full max-w-7xl mx-auto p-2 sm:p-3">
+    <!-- MAIN BODY CONTAINER (WIDESCREEN FLUID LAYOUT) -->
+    <main class="flex-1 w-full max-w-[1780px] mx-auto px-3 sm:px-6 py-3">
 
         <!-- ================= TAB 1: EXECUTIVE DASHBOARD ================= -->
         <section id="tab-dashboard" class="space-y-3">
