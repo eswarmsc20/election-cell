@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Election Police Administration & Route Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Omnivore & JSZip for KMZ extraction -->
+    <script src="https://unpkg.com/@mapbox/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Chart.js for Executive Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        .ps-tooltip-badge {
+            background-color: rgba(255, 255, 255, 0.96);
+            border: 1px solid #2563eb;
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            white-space: nowrap;
+        }
+        .start-location-badge {
+            background-color: #dcfce7;
+            border: 1px solid #16a34a;
+            color: #14532d;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            white-space: nowrap;
+        }
+        .dist-badge-label {
+            background-color: #dc2626;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            border: 1px solid #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+            white-space: nowrap;
+        }
+        .custom-station-pin {
+            background: transparent !important;
+            border: none !important;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased text-xs min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-[1100]">
+        <div class="max-w-7xl mx-auto px-3 py-2 flex flex-wrap justify-between items-center gap-2">
+            
+            <!-- Brand / Title -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md">
+                    <i class="fa-solid fa-shield-halved text-base"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-sm font-bold tracking-wide uppercase">Police Election Cell Administration</h1>
+                        <span class="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded text-[10px] tracking-tight">LIVE SYSTEM</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400">Routes, Polling Stations & Force Deployment Tracking</p>
+                </div>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-2.5 py-1.5 rounded font-semibold text-[11px] bg-blue-600 text-white transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard
+                </button>
+                <button onclick="switchTab('map')" id="tab-btn-map" class="px-2.5 py-1.5 rounded font-medium text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-map-location-dot"></i> Live Route Map
+                </button>
+                <button onclick="switchTab('report')" id="tab-btn-report" class="px-2.5 py-1.5 rounded font-medium text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-table-list"></i> Polling Stations Report
+                </button>
+                <button onclick="switchTab('routewise')" id="tab-btn-routewise" class="px-2.5 py-1.5 rounded font-medium text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-route"></i> PS Route Wise
+                </button>
+                <button onclick="openAddModal()" class="px-2.5 py-1.5 rounded font-semibold text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> Add PS
+                </button>
+                <button onclick="exportToExcel()" class="px-2 py-1.5 rounded text-[11px] bg-teal-700 hover:bg-teal-600 text-white transition flex items-center gap-1" title="Download Excel Report">
+                    <i class="fa-solid fa-file-excel"></i> Excel
+                </button>
+                <button onclick="openDataModal()" class="px-2 py-1.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Data Backup / Restore">
+                    <i class="fa-solid fa-database"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <main class="flex-1 w-full max-w-7xl mx-auto p-2 sm:p-3">
+
+        <!-- ================= TAB 1: EXECUTIVE DASHBOARD ================= -->
+        <section id="tab-dashboard" class="space-y-3">
+            <!-- KPI Counters -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-slate-500">Total Stations</span>
+                        <div class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-person-shelter"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl font-bold text-slate-900 mt-1" id="dash-total-ps">0</div>
+                    <span class="text-[10px] text-slate-500" id="dash-ps-count">0 Police Stations</span>
+                </div>
+
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-emerald-700">Normal</span>
+                        <div class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl font-bold text-emerald-700 mt-1" id="dash-normal-ps">0</div>
+                    <span class="text-[10px] text-emerald-600" id="dash-normal-pct">0% of total</span>
+                </div>
+
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-amber-500">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-amber-700">Sensitive</span>
+                        <div class="w-6 h-6 rounded bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl font-bold text-amber-700 mt-1" id="dash-sensitive-ps">0</div>
+                    <span class="text-[10px] text-amber-600" id="dash-sensitive-pct">0% of total</span>
+                </div>
+
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-orange-500">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-orange-700">Critical</span>
+                        <div class="w-6 h-6 rounded bg-orange-50 text-orange-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-shield-virus"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl font-bold text-orange-700 mt-1" id="dash-critical-ps">0</div>
+                    <span class="text-[10px] text-orange-600" id="dash-critical-pct">0% of total</span>
+                </div>
+
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-rose-600">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-rose-700">Hyper Sensitive</span>
+                        <div class="w-6 h-6 rounded bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-land-mine-on"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl font-bold text-rose-700 mt-1" id="dash-hypersensitive-ps">0</div>
+                    <span class="text-[10px] text-rose-600" id="dash-hypersensitive-pct">0% of total</span>
+                </div>
+
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-purple-700">Total Electors</span>
+                        <div class="w-6 h-6 rounded bg-purple-50 text-purple-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl font-bold text-purple-700 mt-1" id="dash-total-voters">0</div>
+                    <span class="text-[10px] text-purple-600" id="dash-routes-count">0 Patrol Routes</span>
+                </div>
+            </div>
+
+            <!-- Charts & Vulnerability Insights -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <!-- Sensitivity Breakdown Pie -->
+                <div class="bg-white p-3.5 rounded-lg shadow-sm border border-slate-200 flex flex-col items-center">
+                    <h3 class="text-xs font-bold text-slate-800 mb-2 w-full flex items-center justify-between">
+                        <span><i class="fa-solid fa-chart-pie text-blue-600 mr-1.5"></i> Vulnerability Distribution</span>
+                        <span class="text-[10px] text-slate-500 font-normal">ECI Classification</span>
+                    </h3>
+                    <div class="relative w-48 h-48 my-auto">
+                        <canvas id="sensitivityPieChart"></canvas>
+                    </div>
+                    <div class="w-full grid grid-cols-2 gap-1.5 mt-2 text-[10px] text-slate-600">
+                        <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> Normal</div>
+                        <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-amber-500 inline-block"></span> Sensitive</div>
+                        <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-orange-500 inline-block"></span> Critical</div>
+                        <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-rose-600 inline-block"></span> Hyper Sensitive</div>
+                    </div>
+                </div>
+
+                <!-- Top Police Stations by Critical/Sensitive Stations -->
+                <div class="bg-white p-3.5 rounded-lg shadow-sm border border-slate-200 lg:col-span-2">
+                    <h3 class="text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
+                        <span><i class="fa-solid fa-chart-column text-blue-600 mr-1.5"></i> Police Station-wise Vulnerability (Top 10)</span>
+                        <span class="text-[10px] text-slate-500 font-normal">Force Deployment Priority</span>
+                    </h3>
+                    <div class="h-56">
+                        <canvas id="psVulnerabilityBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Police Stations Quick Master Matrix -->
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2">
+                    <h3 class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                        <i class="fa-solid fa-building-shield text-blue-600"></i> Police Station Summary Matrix
+                    </h3>
+                    <span class="text-[10px] text-slate-500">Click on any PS to open live map</span>
+                </div>
+                <div class="overflow-x-auto max-h-72">
+                    <table class="w-full text-left border-collapse text-[11px]">
+                        <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-200 font-semibold">
+                            <tr>
+                                <th class="p-2">Police Station</th>
+                                <th class="p-2 text-center">Total PS</th>
+                                <th class="p-2 text-center text-emerald-700">Normal</th>
+                                <th class="p-2 text-center text-amber-700">Sensitive</th>
+                                <th class="p-2 text-center text-orange-700">Critical</th>
+                                <th class="p-2 text-center text-rose-700">Hyper Sens.</th>
+                                <th class="p-2 text-center">Routes</th>
+                                <th class="p-2 text-center">Voters</th>
+                                <th class="p-2 text-center">Quick Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-matrix-tbody" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: LIVE ELECTION ROUTE MAP ================= -->
+        <section id="tab-map" class="hidden space-y-2">
+            <div class="bg-white p-2.5 rounded-lg shadow-sm border border-slate-200">
+                <!-- Map Filter Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 items-end">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Police Station</label>
+                        <select id="map-filter-psname" onchange="onMapPSChange(this.value)" class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 bg-white">
+                            <option value="">-- All Police Stations --</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Route No</label>
+                        <select id="map-filter-route" onchange="applyMapFilters()" class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 bg-white">
+                            <option value="">-- All Routes --</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Category</label>
+                        <select id="map-filter-category" onchange="applyMapFilters()" class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500 bg-white">
+                            <option value="">-- All Categories --</option>
+                            <option value="NORMAL">Normal</option>
+                            <option value="SENSITIVE">Sensitive</option>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="HYPER SENSITIVE">Hyper Sensitive</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Search Location/School</label>
+                        <input type="text" id="map-search-text" oninput="applyMapFilters()" placeholder="Type school or village..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-blue-500">
+                    </div>
+
+                    <div class="flex items-center gap-1.5 pb-0.5">
+                        <label class="flex items-center gap-1 text-[11px] font-medium cursor-pointer">
+                            <input type="checkbox" id="map-toggle-routes" checked onchange="toggleRoadRoutes(this.checked)" class="rounded text-blue-600">
+                            <span>Road Routes</span>
+                        </label>
+                        <label class="flex items-center gap-1 text-[11px] font-medium cursor-pointer">
+                            <input type="checkbox" id="map-toggle-borders" checked onchange="toggleBorders(this.checked)" class="rounded text-blue-600">
+                            <span>Borders</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <button onclick="resetMapFilters()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2 py-1 rounded text-xs transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-arrows-rotate"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Route Officer Banner (Visible when route is chosen) -->
+                <div id="active-route-banner" class="hidden mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-blue-900 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-blue-600 text-white font-bold px-2 py-0.5 rounded text-[10px]" id="banner-route-tag">ROUTE I</span>
+                        <span class="font-bold text-xs" id="banner-ps-name">PS Name</span>
+                        <span class="text-[11px] text-blue-800" id="banner-staff-details">SI / CI details</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-[11px] font-medium">
+                        <span id="banner-stations-count">0 Stations</span>
+                        <span id="banner-voters-count">0 Electors</span>
+                        <span id="banner-distance-count" class="bg-rose-600 text-white font-bold px-2 py-0.5 rounded text-[10px]">Road Tracking</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leaflet Map Container -->
+            <div class="relative w-full h-[calc(100vh-175px)] min-h-[500px] rounded-lg shadow-md border border-slate-200 overflow-hidden bg-slate-200">
+                <div id="main-map" class="w-full h-full"></div>
+
+                <!-- Floating Map Legend -->
+                <div class="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-slate-200 text-[10px] space-y-1">
+                    <div class="font-bold text-slate-700 border-b pb-0.5 mb-1 flex items-center justify-between gap-3">
+                        <span><i class="fa-solid fa-layer-group text-blue-600"></i> PS Sensitivity</span>
+                        <span id="legend-total-shown" class="font-bold text-blue-700">1329 Shown</span>
+                    </div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block border border-white shadow-sm"></span> Normal Polling Station</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block border border-white shadow-sm"></span> Sensitive Polling Station</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-orange-500 inline-block border border-white shadow-sm"></span> Critical Polling Station</div>
+                    <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-600 inline-block border border-white shadow-sm"></span> Hyper Sensitive Polling Station</div>
+                    <div class="flex items-center gap-1.5"><span class="w-4 h-1 bg-red-600 inline-block border-t border-b border-white"></span> Police Patrol Road Route</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: POLLING STATIONS REPORT (TABLE) ================= -->
+        <section id="tab-report" class="hidden space-y-2.5">
+            <!-- Filter Bar & Search Controls -->
+            <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 space-y-2.5">
+                
+                <!-- Row 1: Quick Category Filter Pills & Dynamic Action Buttons -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs">
+                        <span class="font-bold text-slate-700 mr-1 flex items-center gap-1">
+                            <i class="fa-solid fa-filter text-blue-600"></i> Category Filter:
+                        </span>
+                        <button onclick="setQuickCategory('')" id="pill-cat-all" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-600 text-white transition shadow-sm">
+                            All (<span id="cat-count-all">0</span>)
+                        </button>
+                        <button onclick="setQuickCategory('NORMAL')" id="pill-cat-normal" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition">
+                            🟢 Normal (<span id="cat-count-normal">0</span>)
+                        </button>
+                        <button onclick="setQuickCategory('SENSITIVE')" id="pill-cat-sensitive" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition">
+                            🟡 Sensitive (<span id="cat-count-sensitive">0</span>)
+                        </button>
+                        <button onclick="setQuickCategory('CRITICAL')" id="pill-cat-critical" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-300 transition">
+                            🟠 Critical (<span id="cat-count-critical">0</span>)
+                        </button>
+                        <button onclick="setQuickCategory('HYPER SENSITIVE')" id="pill-cat-hyper" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 transition">
+                            🔴 Hyper Sensitive (<span id="cat-count-hyper">0</span>)
+                        </button>
+                    </div>
+
+                    <!-- Column Visibility & Action Buttons -->
+                    <div class="flex items-center gap-2">
+                        <!-- Column Visibility Manager -->
+                        <div class="relative inline-block text-left">
+                            <button onclick="toggleColumnMenu()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2.5 py-1 rounded text-xs border border-slate-300 flex items-center gap-1.5 transition">
+                                <i class="fa-solid fa-table-columns text-blue-600"></i> Columns <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                            </button>
+                            <div id="column-visibility-menu" class="hidden absolute right-0 mt-1.5 w-60 bg-white border border-slate-200 rounded-lg shadow-2xl z-[1200] p-2.5 text-xs space-y-1 max-h-80 overflow-y-auto">
+                                <div class="font-bold text-slate-800 border-b pb-1 mb-1.5 flex justify-between items-center">
+                                    <span>Show / Hide Columns</span>
+                                    <button onclick="resetColumnsVisibility()" class="text-[10px] text-blue-600 hover:underline">Reset All</button>
+                                </div>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-id')" id="chk-col-id" class="rounded text-blue-600"> <span>ID</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-mandal')" id="chk-col-mandal" class="rounded text-blue-600"> <span>Mandal / ZPTC</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-mptc')" id="chk-col-mptc" class="rounded text-blue-600"> <span>MPTC Segment</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-route')" id="chk-col-route" class="rounded text-blue-600"> <span>Route No</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-psname')" id="chk-col-psname" class="rounded text-blue-600"> <span>Police Station (PS)</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-code')" id="chk-col-code" class="rounded text-blue-600"> <span>PS Code</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-location')" id="chk-col-location" class="rounded text-blue-600"> <span>Location / Building</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-voters')" id="chk-col-voters" class="rounded text-blue-600"> <span>Electors / Voters</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-dist')" id="chk-col-dist" class="rounded text-blue-600"> <span>Distance (KM)</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-cat')" id="chk-col-cat" class="rounded text-blue-600"> <span>Category (Sensitivity)</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-staff')" id="chk-col-staff" class="rounded text-blue-600"> <span>Route Staff (SI / CI)</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-striking')" id="chk-col-striking" class="rounded text-blue-600"> <span>Striking Force (ASI/HC)</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-force')" id="chk-col-force" class="rounded text-blue-600"> <span>Station Staff (PC / HG)</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-blo')" id="chk-col-blo" class="rounded text-blue-600"> <span>BLO Contact</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-lat')" id="chk-col-lat" class="rounded text-blue-600"> <span>Latitude</span></label>
+                                <label class="flex items-center gap-2 py-0.5 cursor-pointer hover:bg-slate-50 px-1 rounded"><input type="checkbox" checked onchange="toggleColumn('col-lng')" id="chk-col-lng" class="rounded text-blue-600"> <span>Longitude</span></label>
+                            </div>
+                        </div>
+
+                        <button onclick="exportToExcel()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-2.5 py-1 rounded text-xs flex items-center gap-1 shadow-sm transition">
+                            <i class="fa-solid fa-file-excel"></i> Export Excel
+                        </button>
+                        <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-2.5 py-1 rounded text-xs flex items-center gap-1 shadow-sm transition">
+                            <i class="fa-solid fa-print"></i> Print
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Row 2: Search Input, Dropdowns, and Dynamic Record Stats -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-2 flex-1">
+                        <!-- Search Box -->
+                        <div class="relative w-64">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
+                            <input type="text" id="table-search-input" oninput="onTableSearch()" placeholder="Search PS, School, SI, BLO..." class="w-full border border-slate-300 rounded pl-8 pr-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 bg-white">
+                        </div>
+
+                        <!-- PS Filter -->
+                        <select id="table-filter-ps" onchange="onTableSearch()" class="border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white focus:ring-1 focus:ring-blue-500 font-medium">
+                            <option value="">-- All Police Stations --</option>
+                        </select>
+
+                        <!-- Route Filter -->
+                        <select id="table-filter-route" onchange="onTableSearch()" class="border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white focus:ring-1 focus:ring-blue-500 font-medium">
+                            <option value="">-- All Routes --</option>
+                        </select>
+
+                        <!-- Distance Filter -->
+                        <select id="table-filter-distance" onchange="onTableSearch()" class="border border-slate-300 rounded px-2.5 py-1.5 text-xs bg-white focus:ring-1 focus:ring-blue-500">
+                            <option value="">-- All Distances --</option>
+                            <option value="near">&le; 5 km (Near)</option>
+                            <option value="medium">6 - 12 km (Medium)</option>
+                            <option value="far">&gt; 12 km (Remote)</option>
+                        </select>
+
+                        <button onclick="resetTableFilters()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2 py-1.5 rounded text-xs border border-slate-300 flex items-center gap-1">
+                            <i class="fa-solid fa-arrows-rotate"></i> Reset
+                        </button>
+                    </div>
+
+                    <!-- Dynamic Live Counter Badges -->
+                    <div class="flex items-center gap-2">
+                        <span class="bg-blue-50 border border-blue-200 text-blue-900 font-bold px-2.5 py-1 rounded text-xs shadow-sm" id="table-record-count">
+                            Records: 0
+                        </span>
+                        <span class="bg-purple-50 border border-purple-200 text-purple-900 font-bold px-2.5 py-1 rounded text-xs shadow-sm" id="table-voters-sum">
+                            0 Electors
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master Data Table with Independent Columns -->
+            <div class="bg-white rounded-lg shadow-md border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto max-h-[calc(100vh-280px)]">
+                    <table class="w-full text-left border-collapse text-[11px] whitespace-nowrap" id="polling-master-table">
+                        <thead class="bg-slate-900 text-white font-semibold sticky top-0 z-10 shadow">
+                            <tr>
+                                <th class="p-2.5 text-center w-12 col-sno cursor-pointer select-none" onclick="toggleSort('sno')">
+                                    <span>#</span> <span id="sort-icon-sno" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 col-id cursor-pointer select-none" onclick="toggleSort('id')">
+                                    <span>ID</span> <span id="sort-icon-id" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 col-mandal cursor-pointer select-none" onclick="toggleSort('mandal_zptc_segment')">
+                                    <span>Mandal / ZPTC</span> <span id="sort-icon-mandal_zptc_segment" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 col-mptc cursor-pointer select-none" onclick="toggleSort('mptc_segment')">
+                                    <span>MPTC Segment</span> <span id="sort-icon-mptc_segment" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 text-center col-route cursor-pointer select-none" onclick="toggleSort('route_no')">
+                                    <span>Route</span> <span id="sort-icon-route_no" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 col-psname cursor-pointer select-none" onclick="toggleSort('psname')">
+                                    <span>Police Station (PS)</span> <span id="sort-icon-psname" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 text-center col-code cursor-pointer select-none" onclick="toggleSort('code')">
+                                    <span>PS Code</span> <span id="sort-icon-code" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 col-location cursor-pointer select-none" onclick="toggleSort('polling_station_location')">
+                                    <span>Polling Station Location / Building</span> <span id="sort-icon-polling_station_location" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 text-center col-voters cursor-pointer select-none" onclick="toggleSort('no_of_voters')">
+                                    <span>Voters</span> <span id="sort-icon-no_of_voters" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 text-center col-dist cursor-pointer select-none" onclick="toggleSort('distance_from_ps_kms')">
+                                    <span>Dist (km)</span> <span id="sort-icon-distance_from_ps_kms" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 text-center col-cat cursor-pointer select-none" onclick="toggleSort('categorization')">
+                                    <span>Category</span> <span id="sort-icon-categorization" class="text-[9px] text-slate-400"></span>
+                                </th>
+                                <th class="p-2.5 col-staff">
+                                    <span>Route Staff (SI / CI)</span>
+                                </th>
+                                <th class="p-2.5 col-striking">
+                                    <span>Striking Force (ASI / HC)</span>
+                                </th>
+                                <th class="p-2.5 text-center col-force">
+                                    <span>PC / HG</span>
+                                </th>
+                                <th class="p-2.5 col-blo">
+                                    <span>BLO Contact</span>
+                                </th>
+                                <th class="p-2.5 col-lat">
+                                    <span>Latitude</span>
+                                </th>
+                                <th class="p-2.5 col-lng">
+                                    <span>Longitude</span>
+                                </th>
+                                <th class="p-2.5 text-center col-actions">
+                                    <span>Actions</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="master-table-tbody" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table Pagination Footer -->
+                <div class="p-2.5 bg-slate-50 border-t border-slate-200 flex flex-wrap justify-between items-center gap-2 text-xs">
+                    <div class="flex items-center gap-2 text-slate-600">
+                        <span>Show</span>
+                        <select id="table-page-size" onchange="changePageSize(this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs bg-white font-medium">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="250">250</option>
+                            <option value="500">500</option>
+                            <option value="all">All Records</option>
+                        </select>
+                        <span id="table-page-info">Showing 1 to 50</span>
+                    </div>
+
+                    <div class="flex items-center gap-1" id="table-pagination-btns">
+                        <!-- Pagination buttons generated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: PS ROUTE WISE TRACKING ================= -->
+        <section id="tab-routewise" class="hidden space-y-3">
+            <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="w-56">
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Select Police Station</label>
+                        <select id="route-tab-psname" onchange="onRouteTabPSChange(this.value)" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold bg-white focus:ring-1 focus:ring-blue-500">
+                            <option value="">-- సెలెక్ట్ పోలీస్ స్టేషన్ --</option>
+                        </select>
+                    </div>
+
+                    <div class="w-48">
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Select Route No</label>
+                        <select id="route-tab-routeno" onchange="loadRouteWiseDetails()" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold bg-white focus:ring-1 focus:ring-blue-500">
+                            <option value="">-- ముందుగా PS ని ఎంచుకోండి --</option>
+                        </select>
+                    </div>
+
+                    <!-- Category Filter in PS Route Wise -->
+                    <div class="w-52">
+                        <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Category (Sensitivity)</label>
+                        <select id="route-tab-category" onchange="loadRouteWiseDetails()" class="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold bg-white focus:ring-1 focus:ring-blue-500">
+                            <option value="">-- All Categories (అన్నీ) --</option>
+                            <option value="NORMAL">🟢 Normal (నార్మల్)</option>
+                            <option value="SENSITIVE">🟡 Sensitive (సెన్సిటివ్)</option>
+                            <option value="CRITICAL">🟠 Critical (క్రిటికల్)</option>
+                            <option value="HYPER SENSITIVE">🔴 Hyper Sensitive (హైపర్ సెన్సిటివ్)</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-4">
+                        <button onclick="loadRouteWiseDetails()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded text-xs flex items-center gap-1.5 shadow transition">
+                            <i class="fa-solid fa-location-crosshairs"></i> ట్రాక్ చెయ్యండి
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Route Details & Map Layout -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                <!-- Left: Route Itinerary Table & Officer Info -->
+                <div class="lg:col-span-5 space-y-2.5">
+                    <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 space-y-2">
+                        <div class="flex items-center justify-between border-b pb-1">
+                            <h3 class="font-bold text-xs text-slate-900 flex items-center gap-1">
+                                <i class="fa-solid fa-user-shield text-blue-600"></i> Route Officer / Mobile In-charge
+                            </h3>
+                            <span id="route-detail-badge" class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[10px] font-bold">ROUTE -</span>
+                        </div>
+                        <div class="text-[11px] space-y-1">
+                            <div class="flex justify-between"><span class="text-slate-500">Route Staff:</span> <b id="route-officer-name" class="text-slate-800">N/A</b></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Phone Contact:</span> <b id="route-officer-ph" class="text-blue-700">N/A</b></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Total Polling Stations:</span> <b id="route-total-stations">0</b></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Total Electors / Voters:</span> <b id="route-total-voters">0</b></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Calculated Driving Path:</span> <b id="route-total-km" class="text-rose-600">-- km</b></div>
+                        </div>
+
+                        <!-- Sensitivity Breakdown Badges in Route Summary -->
+                        <div class="pt-2 border-t border-slate-100 flex flex-wrap gap-1.5 text-[10px]">
+                            <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold">🟢 Normal: <b id="route-count-normal">0</b></span>
+                            <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300 font-bold">🟡 Sensitive: <b id="route-count-sensitive">0</b></span>
+                            <span class="px-2 py-0.5 rounded bg-orange-50 text-orange-800 border border-orange-300 font-bold">🟠 Critical: <b id="route-count-critical">0</b></span>
+                            <span class="px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-300 font-bold">🔴 Hyper: <b id="route-count-hyper">0</b></span>
+                        </div>
+                    </div>
+
+                    <!-- Step by step station itinerary -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-2 bg-slate-50 border-b font-bold text-xs text-slate-800 flex items-center justify-between">
+                            <span><i class="fa-solid fa-list-ol text-blue-600 mr-1"></i> Route Station Itinerary</span>
+                            <span class="text-[10px] text-slate-500" id="route-shown-count">0 Stations Shown</span>
+                        </div>
+                        <div class="overflow-y-auto max-h-[380px] p-2 space-y-2" id="route-stations-list">
+                            <p class="text-slate-400 text-center py-6 text-xs">దయచేసి పోలీస్ స్టేషన్ మరియు రూట్ నంబర్ ఎంచుకోండి.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Dedicated Route Map Canvas -->
+                <div class="lg:col-span-7 bg-white p-2 rounded-lg shadow-sm border border-slate-200 relative">
+                    <div class="w-full h-[540px] rounded-lg overflow-hidden border border-slate-200" id="route-map"></div>
+
+                    <!-- Floating Map Legend for Route Map -->
+                    <div class="absolute bottom-4 left-4 z-[1000] bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-slate-200 text-[10px] space-y-1">
+                        <div class="font-bold text-slate-700 border-b pb-0.5 mb-1 flex items-center justify-between gap-3">
+                            <span><i class="fa-solid fa-layer-group text-blue-600"></i> Category Legend</span>
+                            <span id="route-map-legend-count" class="font-bold text-blue-700">0 Stations</span>
+                        </div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block border border-white shadow-sm"></span> Normal Polling Station</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block border border-white shadow-sm"></span> Sensitive Polling Station</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-orange-500 inline-block border border-white shadow-sm"></span> Critical Polling Station</div>
+                        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-600 inline-block border border-white shadow-sm"></span> Hyper Sensitive Polling Station</div>
+                        <div class="flex items-center gap-1.5"><span class="w-4 h-1 bg-red-600 inline-block border-t border-b border-white"></span> Police Patrol Driving Route</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= ADD / EDIT POLLING STATION MODAL ================= -->
+    <div id="stationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 z-[2000]">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full p-4 sm:p-5 max-h-[92vh] overflow-y-auto border border-slate-300">
+            <div class="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5" id="modal-title">
+                    <i class="fa-solid fa-pen-to-square text-blue-600"></i> Edit Polling Station
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="stationForm" onsubmit="saveStation(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <input type="hidden" id="form-id">
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Police Station (PS Name) *</label>
+                    <input type="text" id="form-psname" required class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Mandal / ZPTC *</label>
+                    <input type="text" id="form-mandal" required class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">MPTC Segment</label>
+                    <input type="text" id="form-mptc" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Route No *</label>
+                    <input type="text" id="form-route" required placeholder="e.g. I, II, III, 1, 2" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">PS Code / No</label>
+                    <input type="text" id="form-code" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Sensitivity Category *</label>
+                    <select id="form-categorization" required class="w-full border rounded px-2.5 py-1.5 text-xs font-semibold focus:ring-1 focus:ring-blue-500 bg-white">
+                        <option value="NORMAL">NORMAL</option>
+                        <option value="SENSITIVE">SENSITIVE</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HYPER SENSITIVE">HYPER SENSITIVE</option>
+                    </select>
+                </div>
+
+                <div class="sm:col-span-2 md:col-span-3">
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Polling Station Location / Building Name *</label>
+                    <input type="text" id="form-location" required class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">No. of Electors / Voters</label>
+                    <input type="number" id="form-voters" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Distance from PS (KMs)</label>
+                    <input type="text" id="form-distance" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">BLO Contact Number(s)</label>
+                    <input type="text" id="form-blo" placeholder="Phone numbers" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Route Staff Details (SI / CI)</label>
+                    <input type="text" id="form-routestaff" placeholder="SI Name, Phone..." class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Striking Force (ASI / HC)</label>
+                    <input type="text" id="form-asi" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Staff Details (PC / HG)</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="form-pc" placeholder="PC count" class="w-1/2 border rounded px-2 py-1.5 text-xs">
+                        <input type="number" id="form-hg" placeholder="HG count" class="w-1/2 border rounded px-2 py-1.5 text-xs">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Latitude</label>
+                    <input type="text" id="form-lat" placeholder="e.g. 18.2982" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 uppercase mb-1">Longitude</label>
+                    <input type="text" id="form-lng" placeholder="e.g. 83.8966" class="w-full border rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <div class="flex items-end">
+                    <button type="button" onclick="pickCoordinatesOnMap()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-2 py-1.5 rounded text-xs border border-slate-300 flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-map-pin text-rose-600"></i> Map Coordinates Picker
+                    </button>
+                </div>
+
+                <div class="sm:col-span-2 md:col-span-3 flex justify-end gap-2 pt-3 border-t">
+                    <button type="button" onclick="closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-3 py-1.5 rounded text-xs">
+                        Cancel / మూసివేయి
+                    </button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-1.5 rounded text-xs shadow">
+                        <i class="fa-solid fa-floppy-disk mr-1"></i> Save Polling Station
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= DATA BACKUP & RESTORE MODAL ================= -->
+    <div id="dataModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 z-[2000]">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-4 border border-slate-300">
+            <div class="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                    <i class="fa-solid fa-database text-blue-600"></i> Data Backup & Synchronization
+                </h3>
+                <button onclick="closeDataModal()" class="text-slate-400 hover:text-slate-700 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <p class="text-slate-600">మీరు నమోదు చేసిన మార్పులు మీ బ్రౌజర్ లోకల్ స్టోరేజ్ (LocalStorage) లో సురక్షితంగా సేవ్ అవుతాయి.</p>
+                
+                <div class="p-2.5 bg-slate-50 rounded border border-slate-200 space-y-2">
+                    <b class="text-slate-800">1. డౌన్‌లోడ్ బ్యాకప్ (JSON File):</b>
+                    <p class="text-slate-500 text-[11px]">తాజా డేటాను డౌన్‌లోడ్ చేసి GitHub లో భద్రపరచండి.</p>
+                    <button onclick="downloadJsonBackup()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-download"></i> Download stations.json Backup
+                    </button>
+                </div>
+
+                <div class="p-2.5 bg-slate-50 rounded border border-slate-200 space-y-2">
+                    <b class="text-slate-800">2. అప్‌లోడ్ బ్యాకప్ ఫైల్:</b>
+                    <input type="file" id="json-upload-input" accept=".json" class="w-full text-[11px]">
+                    <button onclick="uploadJsonBackup()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-upload"></i> Restore from JSON
+                    </button>
+                </div>
+
+                <div class="p-2.5 bg-rose-50 rounded border border-rose-200 space-y-2">
+                    <b class="text-rose-800">3. ఒరిజినల్ డేటా రీసెట్:</b>
+                    <p class="text-rose-600 text-[11px]">అన్ని మార్పులను తొలగించి మొదటి 1,329 రికార్డులకు రీసెట్ చేస్తుంది.</p>
+                    <button onclick="resetDataToDefault()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold px-3 py-1.5 rounded text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Reset to Default (1329 Records)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Local Stations Dataset directly to prevent any CORS block -->
+    <script src="data/stations.js"></script>
+
+    <!-- Main Application JavaScript Logic -->
+    <script>
+        // Global State
+        let allStations = [];
+        let filteredMapStations = [];
+        let mainMap = null;
+        let routeMap = null;
+        let mainMarkersGroup = null;
+        let mainRoutesGroup = null;
+        let currentMapFilterToken = 0;
+        let mandalBoundariesLayer = null;
+        let sensitivityChartInstance = null;
+        let psVulnerabilityChartInstance = null;
+        
+        // Table pagination state
+        let tableCurrentPage = 1;
+        let tablePageSize = 50;
+        let tableFilteredStations = [];
+
+        // Sensitivity styles & marker icons
+        const SENSITIVITY_COLORS = {
+            'NORMAL': { bg: '#10b981', text: '#065f46', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300', iconUrl: 'NORMAL.jpeg' },
+            'SENSITIVE': { bg: '#f59e0b', text: '#92400e', badge: 'bg-amber-100 text-amber-800 border-amber-300', iconUrl: 'SENSITIVE.jpeg' },
+            'CRITICAL': { bg: '#f97316', text: '#9a3412', badge: 'bg-orange-100 text-orange-800 border-orange-300', iconUrl: 'CRITICAL.jpeg' },
+            'HYPER SENSITIVE': { bg: '#e11d48', text: '#9f1239', badge: 'bg-rose-100 text-rose-800 border-rose-300', iconUrl: 'HYPER SENSITIVE.jpeg' }
+        };
+
+        // Initialize App on DOM Ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeDataset();
+            renderDashboard();
+            populateDropdowns();
+            initMainMap();
+            renderTable();
+        });
+
+        // Initialize Data (LocalStorage -> window.INITIAL_STATIONS -> fetch fallback)
+        async function initializeDataset() {
+            const stored = localStorage.getItem('POLICE_ELECTION_STATIONS_DATA');
+            if (stored) {
+                try {
+                    allStations = JSON.parse(stored);
+                    console.log('Loaded from LocalStorage:', allStations.length);
+                    return;
+                } catch(e) {
+                    console.error('Error parsing local storage:', e);
+                }
+            }
+
+            if (window.INITIAL_STATIONS && Array.isArray(window.INITIAL_STATIONS) && window.INITIAL_STATIONS.length > 0) {
+                allStations = window.INITIAL_STATIONS;
+                console.log('Loaded from stations.js:', allStations.length);
+                return;
+            }
+
+            try {
+                const res = await fetch('data/stations.json');
+                allStations = await res.json();
+                console.log('Loaded from fetch:', allStations.length);
+            } catch (err) {
+                console.error('Could not load data:', err);
+                allStations = [];
+            }
+        }
+
+        function saveDatasetLocally() {
+            try {
+                localStorage.setItem('POLICE_ELECTION_STATIONS_DATA', JSON.stringify(allStations));
+            } catch(e) {
+                console.warn('Storage limit or error:', e);
+            }
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            ['dashboard', 'map', 'report', 'routewise'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabId) {
+                    el.classList.remove('hidden');
+                    btn.classList.add('bg-blue-600', 'text-white');
+                    btn.classList.remove('bg-slate-800', 'text-slate-300');
+                } else {
+                    el.classList.add('hidden');
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('bg-slate-800', 'text-slate-300');
+                }
+            });
+
+            if (tabId === 'map') {
+                setTimeout(() => {
+                    if (mainMap) {
+                        mainMap.invalidateSize();
+                        applyMapFilters();
+                    }
+                }, 200);
+            } else if (tabId === 'routewise') {
+                setTimeout(() => {
+                    initRouteMap();
+                }, 200);
+            } else if (tabId === 'report') {
+                renderTable();
+            } else if (tabId === 'dashboard') {
+                renderDashboard();
+            }
+        }
+
+        // Populate all filter dropdowns
+        function populateDropdowns() {
+            const psSet = new Set();
+            const routeSet = new Set();
+
+            allStations.forEach(s => {
+                if (s.psname) psSet.add(s.psname.trim());
+                if (s.route_no) routeSet.add(s.route_no.trim());
+            });
+
+            const sortedPS = Array.from(psSet).sort();
+            const sortedRoutes = Array.from(routeSet).sort();
+
+            // Populate Map PS
+            const mapPsSelect = document.getElementById('map-filter-psname');
+            const tablePsSelect = document.getElementById('table-filter-ps');
+            const routeTabPsSelect = document.getElementById('route-tab-psname');
+
+            mapPsSelect.innerHTML = '<option value="">-- All Police Stations --</option>';
+            tablePsSelect.innerHTML = '<option value="">-- All Police Stations --</option>';
+            routeTabPsSelect.innerHTML = '<option value="">-- సెలెక్ట్ పోలీస్ స్టేషన్ --</option>';
+
+            sortedPS.forEach(ps => {
+                mapPsSelect.innerHTML += `<option value="${ps}">${ps}</option>`;
+                tablePsSelect.innerHTML += `<option value="${ps}">${ps}</option>`;
+                routeTabPsSelect.innerHTML += `<option value="${ps}">${ps}</option>`;
+            });
+
+            // Populate Table Routes
+            const tableRouteSelect = document.getElementById('table-filter-route');
+            tableRouteSelect.innerHTML = '<option value="">-- All Routes --</option>';
+            sortedRoutes.forEach(r => {
+                tableRouteSelect.innerHTML += `<option value="${r}">Route - ${r}</option>`;
+            });
+        }
+
+        // ================= DASHBOARD RENDERING =================
+        function renderDashboard() {
+            let total = allStations.length;
+            let normal = 0, sensitive = 0, critical = 0, hyper = 0, voters = 0;
+            const psMap = {};
+            const routeSet = new Set();
+
+            allStations.forEach(s => {
+                const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
+                if (cat === 'HYPER SENSITIVE') hyper++;
+                else if (cat === 'CRITICAL') critical++;
+                else if (cat === 'SENSITIVE') sensitive++;
+                else normal++;
+
+                const v = parseInt(s.no_of_voters, 10);
+                if (!isNaN(v)) voters += v;
+
+                const ps = (s.psname || 'Unknown').trim();
+                if (!psMap[ps]) {
+                    psMap[ps] = { total: 0, normal: 0, sensitive: 0, critical: 0, hyper: 0, voters: 0, routes: new Set() };
+                }
+                psMap[ps].total++;
+                if (cat === 'HYPER SENSITIVE') psMap[ps].hyper++;
+                else if (cat === 'CRITICAL') psMap[ps].critical++;
+                else if (cat === 'SENSITIVE') psMap[ps].sensitive++;
+                else psMap[ps].normal++;
+
+                if (!isNaN(v)) psMap[ps].voters += v;
+                if (s.route_no) {
+                    psMap[ps].routes.add(s.route_no.trim());
+                    routeSet.add(s.route_no.trim());
+                }
+            });
+
+            document.getElementById('dash-total-ps').innerText = total.toLocaleString();
+            document.getElementById('dash-ps-count').innerText = `${Object.keys(psMap).length} Police Stations`;
+            
+            document.getElementById('dash-normal-ps').innerText = normal.toLocaleString();
+            document.getElementById('dash-normal-pct').innerText = total > 0 ? `${((normal/total)*100).toFixed(1)}% of total` : '0%';
+
+            document.getElementById('dash-sensitive-ps').innerText = sensitive.toLocaleString();
+            document.getElementById('dash-sensitive-pct').innerText = total > 0 ? `${((sensitive/total)*100).toFixed(1)}% of total` : '0%';
+
+            document.getElementById('dash-critical-ps').innerText = critical.toLocaleString();
+            document.getElementById('dash-critical-pct').innerText = total > 0 ? `${((critical/total)*100).toFixed(1)}% of total` : '0%';
+
+            document.getElementById('dash-hypersensitive-ps').innerText = hyper.toLocaleString();
+            document.getElementById('dash-hypersensitive-pct').innerText = total > 0 ? `${((hyper/total)*100).toFixed(1)}% of total` : '0%';
+
+            document.getElementById('dash-total-voters').innerText = voters.toLocaleString();
+            document.getElementById('dash-routes-count').innerText = `${routeSet.size} Active Patrol Routes`;
+
+            // Render Charts
+            renderCharts(normal, sensitive, critical, hyper, psMap);
+
+            // Render PS Summary Matrix
+            renderPSMatrix(psMap);
+        }
+
+        function renderCharts(normal, sensitive, critical, hyper, psMap) {
+            // Pie Chart
+            const pieCtx = document.getElementById('sensitivityPieChart').getContext('2d');
+            if (sensitivityChartInstance) sensitivityChartInstance.destroy();
+
+            sensitivityChartInstance = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Normal', 'Sensitive', 'Critical', 'Hyper Sensitive'],
+                    datasets: [{
+                        data: [normal, sensitive, critical, hyper],
+                        backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#e11d48'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // PS Bar Chart (Top 10 by Vulnerability)
+            const sortedPS = Object.keys(psMap).sort((a,b) => {
+                const vulnB = (psMap[b].sensitive + psMap[b].critical + psMap[b].hyper);
+                const vulnA = (psMap[a].sensitive + psMap[a].critical + psMap[a].hyper);
+                return vulnB - vulnA;
+            }).slice(0, 10);
+
+            const barCtx = document.getElementById('psVulnerabilityBarChart').getContext('2d');
+            if (psVulnerabilityChartInstance) psVulnerabilityChartInstance.destroy();
+
+            psVulnerabilityChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedPS,
+                    datasets: [
+                        { label: 'Hyper Sensitive', data: sortedPS.map(ps => psMap[ps].hyper), backgroundColor: '#e11d48' },
+                        { label: 'Critical', data: sortedPS.map(ps => psMap[ps].critical), backgroundColor: '#f97316' },
+                        { label: 'Sensitive', data: sortedPS.map(ps => psMap[ps].sensitive), backgroundColor: '#f59e0b' },
+                        { label: 'Normal', data: sortedPS.map(ps => psMap[ps].normal), backgroundColor: '#10b981' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, ticks: { font: { size: 9 } } },
+                        y: { stacked: true, ticks: { font: { size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        function renderPSMatrix(psMap) {
+            const tbody = document.getElementById('dash-matrix-tbody');
+            tbody.innerHTML = '';
+
+            const sorted = Object.keys(psMap).sort();
+            sorted.forEach(ps => {
+                const info = psMap[ps];
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="p-2 font-bold text-slate-800">${ps}</td>
+                        <td class="p-2 text-center font-bold">${info.total}</td>
+                        <td class="p-2 text-center font-semibold text-emerald-700">${info.normal}</td>
+                        <td class="p-2 text-center font-semibold text-amber-700">${info.sensitive}</td>
+                        <td class="p-2 text-center font-semibold text-orange-700">${info.critical}</td>
+                        <td class="p-2 text-center font-semibold text-rose-700">${info.hyper}</td>
+                        <td class="p-2 text-center">${info.routes.size}</td>
+                        <td class="p-2 text-center text-slate-600">${info.voters.toLocaleString()}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="jumpToPSMap('${ps}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px] transition border border-blue-200">
+                                <i class="fa-solid fa-map-location-dot"></i> View Map
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function jumpToPSMap(psName) {
+            switchTab('map');
+            const psSelect = document.getElementById('map-filter-psname');
+            psSelect.value = psName;
+            onMapPSChange(psName);
+        }
+
+        // ================= TAB 2: LIVE LEAFLET MAP LOGIC =================
+        function initMainMap() {
+            if (mainMap) return;
+
+            // Default centered on Srikakulam / AP region
+            mainMap = L.map('main-map').setView([18.3, 83.9], 10);
+
+            // Base Tile Layers
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(mainMap);
+
+            const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '© Google Maps Satellite'
+            });
+
+            const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© CARTO'
+            });
+
+            L.control.layers({
+                "OpenStreetMap": osm,
+                "Google Satellite Hybrid": googleHybrid,
+                "Carto Light Clean": cartoLight
+            }, null, { position: 'topright' }).addTo(mainMap);
+
+            // Initialize isolated layer groups
+            mainMarkersGroup = L.layerGroup().addTo(mainMap);
+            mainRoutesGroup = L.layerGroup().addTo(mainMap);
+
+            // Load Mandal Boundaries from KMZ using JSZip
+            loadMandalBoundaries();
+
+            // Initial render of markers
+            applyMapFilters();
+        }
+
+        function loadMandalBoundaries() {
+            fetch('BORDERSKL-Mandals.kmz')
+                .then(res => {
+                    if (!res.ok) throw new Error('KMZ not found');
+                    return res.arrayBuffer();
+                })
+                .then(data => JSZip.loadAsync(data))
+                .then(zip => {
+                    const kmlFileName = Object.keys(zip.files).find(name => name.toLowerCase().endsWith('.kml'));
+                    if (kmlFileName) {
+                        return zip.files[kmlFileName].async('string');
+                    }
+                    throw new Error('No KML inside KMZ');
+                })
+                .then(kmlText => {
+                    mandalBoundariesLayer = omnivore.kml.parse(kmlText, null, L.geoJson(null, {
+                        style: function() {
+                            return { color: "#2563eb", weight: 2, opacity: 0.85, fillOpacity: 0.08 };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            if (feature.properties && feature.properties.name) {
+                                layer.bindTooltip(`<b>Mandal:</b> ${feature.properties.name}`, { sticky: true });
+                            }
+                        }
+                    })).addTo(mainMap);
+                })
+                .catch(err => {
+                    console.warn('Could not load KMZ boundary file:', err);
+                });
+        }
+
+        function toggleBorders(show) {
+            if (!mandalBoundariesLayer || !mainMap) return;
+            if (show) mainMap.addLayer(mandalBoundariesLayer);
+            else mainMap.removeLayer(mandalBoundariesLayer);
+        }
+
+        function toggleRoadRoutes(show) {
+            if (!mainRoutesGroup || !mainMap) return;
+            if (show) mainMap.addLayer(mainRoutesGroup);
+            else mainMap.removeLayer(mainRoutesGroup);
+        }
+
+        function onMapPSChange(psname) {
+            const routeSelect = document.getElementById('map-filter-route');
+            routeSelect.innerHTML = '<option value="">-- All Routes --</option>';
+
+            if (psname) {
+                const routesInPS = new Set();
+                allStations.filter(s => (s.psname || '').trim() === psname.trim()).forEach(s => {
+                    if (s.route_no) routesInPS.add(s.route_no.trim());
+                });
+                Array.from(routesInPS).sort().forEach(r => {
+                    routeSelect.innerHTML += `<option value="${r}">Route - ${r}</option>`;
+                });
+            }
+
+            applyMapFilters();
+        }
+
+        function resetMapFilters() {
+            document.getElementById('map-filter-psname').value = '';
+            document.getElementById('map-filter-route').innerHTML = '<option value="">-- All Routes --</option>';
+            document.getElementById('map-filter-category').value = '';
+            document.getElementById('map-search-text').value = '';
+            applyMapFilters();
+        }
+
+        function applyMapFilters() {
+            if (!mainMap) return;
+
+            // Invalidate any in-flight asynchronous route requests
+            const thisToken = ++currentMapFilterToken;
+
+            const selectedPS = document.getElementById('map-filter-psname').value.trim();
+            const selectedRoute = document.getElementById('map-filter-route').value.trim();
+            const selectedCat = document.getElementById('map-filter-category').value.trim();
+            const searchText = document.getElementById('map-search-text').value.trim().toLowerCase();
+
+            // Completely wipe previous markers & route lines across the entire district!
+            if (mainMarkersGroup) mainMarkersGroup.clearLayers();
+            if (mainRoutesGroup) mainRoutesGroup.clearLayers();
+
+            // Strict filtering: ONLY matching stations are allowed!
+            filteredMapStations = allStations.filter(s => {
+                if (selectedPS && (s.psname || '').trim() !== selectedPS) return false;
+                if (selectedRoute && (s.route_no || '').trim() !== selectedRoute) return false;
+                if (selectedCat && (s.categorization || 'NORMAL').trim().toUpperCase() !== selectedCat) return false;
+                if (searchText) {
+                    const loc = (s.polling_station_location || '').toLowerCase();
+                    const mandal = (s.mandal_zptc_segment || '').toLowerCase();
+                    const ps = (s.psname || '').toLowerCase();
+                    if (!loc.includes(searchText) && !mandal.includes(searchText) && !ps.includes(searchText)) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('legend-total-shown').innerText = `${filteredMapStations.length} Shown`;
+
+            const routeGroups = {};
+            const routeStaffInfo = {};
+            const bounds = [];
+
+            filteredMapStations.forEach((s) => {
+                const lat = parseFloat(s.latitude);
+                const lng = parseFloat(s.longitude);
+
+                if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                    const latLng = [lat, lng];
+                    bounds.push(latLng);
+
+                    const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
+                    const markerIcon = createStationMarkerIcon(cat);
+
+                    const marker = L.marker(latLng, { icon: markerIcon });
+                    mainMarkersGroup.addLayer(marker);
+
+                    // Tooltip
+                    const locName = s.polling_station_location || `PS Code ${s.code || ''}`;
+                    const shortName = locName.length > 25 ? locName.substring(0, 25) + '...' : locName;
+                    marker.bindTooltip(shortName, { direction: 'top', className: 'ps-tooltip-badge', offset: [0, -18] });
+
+                    // Popup Content
+                    const popupContent = buildStationPopupHtml(s);
+                    marker.bindPopup(popupContent, { maxWidth: 320 });
+
+                    // Group exclusively for this station's route
+                    const rKey = `${s.psname || 'PS'}_${s.route_no || 'R'}`;
+                    if (!routeGroups[rKey]) {
+                        routeGroups[rKey] = [];
+                        routeStaffInfo[rKey] = {
+                            staff: s.route_staff || 'Not Assigned',
+                            ps: s.psname || '',
+                            route: s.route_no || ''
+                        };
+                    }
+                    routeGroups[rKey].push(latLng);
+                }
+            });
+
+            // Update Active Route Banner
+            const banner = document.getElementById('active-route-banner');
+            if (selectedPS && selectedRoute && filteredMapStations.length > 0) {
+                banner.classList.remove('hidden');
+                document.getElementById('banner-route-tag').innerText = `ROUTE ${selectedRoute}`;
+                document.getElementById('banner-ps-name').innerText = selectedPS;
+                
+                const sample = filteredMapStations[0];
+                document.getElementById('banner-staff-details').innerText = sample.route_staff ? `Incharge: ${sample.route_staff}` : 'Route Mobile In-charge';
+                document.getElementById('banner-stations-count').innerText = `${filteredMapStations.length} Polling Stations`;
+                
+                let vSum = 0;
+                filteredMapStations.forEach(st => { vSum += (parseInt(st.no_of_voters, 10) || 0); });
+                document.getElementById('banner-voters-count').innerText = `${vSum.toLocaleString()} Voters`;
+            } else {
+                banner.classList.add('hidden');
+            }
+
+            // Draw road routes ONLY for the selected stations/route, and ONLY when toggled
+            // Never draw routes across the entire district at once (prevents ghost lines & rate limits)
+            const canDrawRoutes = document.getElementById('map-toggle-routes').checked && (selectedPS || selectedRoute || Object.keys(routeGroups).length <= 4);
+            if (canDrawRoutes && Object.keys(routeGroups).length > 0) {
+                drawRoadRoutesForMap(routeGroups, routeStaffInfo, thisToken);
+            }
+
+            // Tightly auto-zoom directly to the selected stations!
+            if (bounds.length > 0) {
+                mainMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            }
+        }
+
+        function createStationMarkerIcon(categorization, number) {
+            const cat = (categorization || 'NORMAL').trim().toUpperCase();
+            const config = SENSITIVITY_COLORS[cat] || SENSITIVITY_COLORS['NORMAL'];
+            const pinColor = config.bg; // #10b981 (Normal), #f59e0b (Sensitive), #f97316 (Critical), #e11d48 (Hyper Sensitive)
+            const isHyper = cat === 'HYPER SENSITIVE';
+            const label = number !== undefined ? number : (isHyper ? '!' : '<i class="fa-solid fa-person-shelter"></i>');
+            
+            // Ultra-crisp SVG teardrop pin with white badge circle and optional alert pulse for Hyper Sensitive
+            const pulseHtml = isHyper ? `<div style="position:absolute; top:-2px; left:-2px; width:38px; height:38px; border-radius:50%; background:#e11d48; opacity:0.35; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : '';
+
+            const html = `
+                <div style="position: relative; width: 34px; height: 44px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45)); cursor: pointer; text-align: center;">
+                    ${pulseHtml}
+                    <svg width="34" height="42" viewBox="0 0 34 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 0C7.61116 0 0 7.61116 0 17C0 27.5 14.5 40.5 16.1 41.9C16.6 42.3 17.4 42.3 17.9 41.9C19.5 40.5 34 27.5 34 17C34 7.61116 26.3888 0 17 0Z" fill="${pinColor}" stroke="#ffffff" stroke-width="2.5"/>
+                        <circle cx="17" cy="16" r="10" fill="#ffffff"/>
+                    </svg>
+                    <div style="position: absolute; top: 6px; left: 0; width: 34px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: ${number !== undefined ? '11px' : '9px'}; font-weight: 800; color: ${pinColor}; font-family: system-ui, -apple-system, sans-serif;">
+                        ${label}
+                    </div>
+                </div>
+            `;
+
+            return L.divIcon({
+                className: 'custom-station-pin',
+                html: html,
+                iconSize: [34, 44],
+                iconAnchor: [17, 42],
+                popupAnchor: [0, -38]
+            });
+        }
+
+        function buildStationPopupHtml(station) {
+            const cat = (station.categorization || 'NORMAL').trim().toUpperCase();
+            const badgeClass = SENSITIVITY_COLORS[cat]?.badge || 'bg-slate-100 text-slate-800';
+
+            return `
+                <div class="p-1 font-sans text-xs">
+                    <div class="flex justify-between items-start gap-1 pb-1.5 border-b mb-1.5">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">${station.psname || 'Police Station'}</span>
+                            <h4 class="font-bold text-slate-900 leading-tight">${station.polling_station_location || 'Polling Station'}</h4>
+                        </div>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">${cat}</span>
+                    </div>
+
+                    <table class="w-full text-[11px] mb-2 leading-snug">
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500 w-28">Mandal/ZPTC:</td><td class="font-semibold text-slate-800">${station.mandal_zptc_segment || 'N/A'}</td></tr>
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500">MPTC Segment:</td><td class="text-slate-800">${station.mptc_segment || 'N/A'}</td></tr>
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500">Route No:</td><td class="font-bold text-blue-700">Route ${station.route_no || 'N/A'}</td></tr>
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500">Route Staff:</td><td class="font-semibold text-slate-900">${station.route_staff || 'N/A'}</td></tr>
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500">No. of Voters:</td><td class="font-bold text-purple-700">${(parseInt(station.no_of_voters, 10) || 0).toLocaleString()}</td></tr>
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500">Dist from PS:</td><td>${station.distance_from_ps_kms ? station.distance_from_ps_kms + ' km' : 'N/A'}</td></tr>
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500">BLO Contact:</td><td class="font-bold text-emerald-700">${station.blo_contact_no || 'N/A'}</td></tr>
+                        <tr class="border-b border-slate-100"><td class="py-0.5 text-slate-500">Striking Force:</td><td>${station.asi_hc || 'N/A'} (PC: ${station.pc || 0}, HG: ${station.hg || 0})</td></tr>
+                        <tr><td class="py-0.5 text-slate-500">GPS Coords:</td><td class="text-slate-500 text-[10px]">${station.latitude}, ${station.longitude}</td></tr>
+                    </table>
+
+                    <div class="flex gap-1.5 pt-1 border-t">
+                        <button onclick="openEditModal(${station.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-[11px] flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-pen-to-square"></i> Edit Details
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Draw Driving Paths strictly for the active token & selected route
+        async function drawRoadRoutesForMap(routeGroups, routeStaffInfo, token) {
+            for (const rKey in routeGroups) {
+                if (token !== currentMapFilterToken) return;
+
+                const coords = routeGroups[rKey];
+                if (coords.length > 1) {
+                    const coordString = coords.map(c => c[1] + ',' + c[0]).join(';');
+                    const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
+                    const info = routeStaffInfo[rKey] || {};
+
+                    try {
+                        const res = await fetch(url);
+                        if (token !== currentMapFilterToken) return;
+
+                        const data = await res.json();
+                        if (data.routes && data.routes.length > 0) {
+                            const routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                            const distKm = (data.routes[0].distance / 1000).toFixed(1);
+
+                            // White Outline
+                            const outline = L.polyline(routeCoords, { color: '#ffffff', weight: 6, opacity: 0.9 });
+                            // Main Red Road Line
+                            const polyline = L.polyline(routeCoords, { color: '#dc2626', weight: 4, opacity: 0.95 });
+
+                            polyline.bindPopup(`<b>Route ${info.route} (${info.ps})</b><br>Staff: ${info.staff}<br>Total Driving Distance: <b>${distKm} km</b>`);
+
+                            if (mainRoutesGroup && token === currentMapFilterToken) {
+                                mainRoutesGroup.addLayer(outline);
+                                mainRoutesGroup.addLayer(polyline);
+                            }
+                        } else {
+                            fallbackDirectLine(coords, info, token);
+                        }
+                    } catch(e) {
+                        fallbackDirectLine(coords, info, token);
+                    }
+                }
+            }
+        }
+
+        function fallbackDirectLine(coords, info, token) {
+            if (token !== currentMapFilterToken || !mainRoutesGroup) return;
+            const polyline = L.polyline(coords, {
+                color: '#dc2626',
+                weight: 3,
+                opacity: 0.8,
+                dashArray: '6, 6'
+            });
+            polyline.bindPopup(`<b>Route ${info.route || ''} (${info.ps || ''})</b><br>Staff: ${info.staff || 'N/A'}`);
+            mainRoutesGroup.addLayer(polyline);
+        }
+
+        // ================= TAB 3: POLLING STATIONS REPORT (TABLE) =================
+        let tableSortColumn = 'sno';
+        let tableSortOrder = 'asc';
+        let activeQuickCategory = '';
+        let hiddenTableColumns = new Set();
+
+        function toggleColumnMenu() {
+            const menu = document.getElementById('column-visibility-menu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        // Close column menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('column-visibility-menu');
+            const btn = e.target.closest('button');
+            if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && (!btn || !btn.textContent.includes('Columns'))) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        function toggleColumn(colClass) {
+            if (hiddenTableColumns.has(colClass)) {
+                hiddenTableColumns.delete(colClass);
+            } else {
+                hiddenTableColumns.add(colClass);
+            }
+            applyColumnVisibility();
+        }
+
+        function resetColumnsVisibility() {
+            hiddenTableColumns.clear();
+            document.querySelectorAll('#column-visibility-menu input[type="checkbox"]').forEach(chk => chk.checked = true);
+            applyColumnVisibility();
+        }
+
+        function applyColumnVisibility() {
+            const allColClasses = [
+                'col-sno', 'col-id', 'col-mandal', 'col-mptc', 'col-route', 'col-psname', 
+                'col-code', 'col-location', 'col-voters', 'col-dist', 'col-cat', 'col-staff', 
+                'col-striking', 'col-force', 'col-blo', 'col-lat', 'col-lng', 'col-actions'
+            ];
+
+            allColClasses.forEach(c => {
+                const isHidden = hiddenTableColumns.has(c);
+                const els = document.querySelectorAll(`.${c}`);
+                els.forEach(el => {
+                    if (isHidden) el.classList.add('hidden');
+                    else el.classList.remove('hidden');
+                });
+            });
+        }
+
+        function setQuickCategory(cat) {
+            activeQuickCategory = cat;
+
+            // Update pill styling
+            const pills = {
+                '': 'pill-cat-all',
+                'NORMAL': 'pill-cat-normal',
+                'SENSITIVE': 'pill-cat-sensitive',
+                'CRITICAL': 'pill-cat-critical',
+                'HYPER SENSITIVE': 'pill-cat-hyper'
+            };
+
+            for (const k in pills) {
+                const el = document.getElementById(pills[k]);
+                if (!el) continue;
+                if (k === cat) {
+                    el.className = 'px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-600 text-white transition shadow-sm';
+                } else {
+                    el.className = 'px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition';
+                }
+            }
+
+            tableCurrentPage = 1;
+            renderTable();
+        }
+
+        function toggleSort(columnKey) {
+            if (tableSortColumn === columnKey) {
+                tableSortOrder = tableSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                tableSortColumn = columnKey;
+                tableSortOrder = 'asc';
+            }
+            renderTable();
+        }
+
+        function resetTableFilters() {
+            document.getElementById('table-search-input').value = '';
+            document.getElementById('table-filter-ps').value = '';
+            document.getElementById('table-filter-route').value = '';
+            document.getElementById('table-filter-distance').value = '';
+            setQuickCategory('');
+        }
+
+        function onTableSearch() {
+            tableCurrentPage = 1;
+            renderTable();
+        }
+
+        function changePageSize(val) {
+            tablePageSize = val === 'all' ? 999999 : parseInt(val, 10);
+            tableCurrentPage = 1;
+            renderTable();
+        }
+
+        // Format phone numbers as clickable dial links
+        function formatPhoneLinks(rawText) {
+            if (!rawText) return '-';
+            // Regex to find 10-digit phone numbers
+            return rawText.replace(/(\b[6-9]\d{9}\b)/g, '<a href="tel:$1" class="text-blue-600 hover:text-blue-800 font-semibold underline inline-flex items-center gap-0.5"><i class="fa-solid fa-phone text-[9px]"></i>$1</a>');
+        }
+
+        function renderTable() {
+            const search = (document.getElementById('table-search-input')?.value || '').trim().toLowerCase();
+            const psFilter = (document.getElementById('table-filter-ps')?.value || '').trim();
+            const routeFilter = (document.getElementById('table-filter-route')?.value || '').trim();
+            const distFilter = (document.getElementById('table-filter-distance')?.value || '').trim();
+
+            // Calculate category counts for quick pills
+            let cAll = 0, cNormal = 0, cSensitive = 0, cCritical = 0, cHyper = 0;
+            allStations.forEach(s => {
+                cAll++;
+                const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
+                if (cat === 'HYPER SENSITIVE') cHyper++;
+                else if (cat === 'CRITICAL') cCritical++;
+                else if (cat === 'SENSITIVE') cSensitive++;
+                else cNormal++;
+            });
+
+            if (document.getElementById('cat-count-all')) document.getElementById('cat-count-all').innerText = cAll.toLocaleString();
+            if (document.getElementById('cat-count-normal')) document.getElementById('cat-count-normal').innerText = cNormal.toLocaleString();
+            if (document.getElementById('cat-count-sensitive')) document.getElementById('cat-count-sensitive').innerText = cSensitive.toLocaleString();
+            if (document.getElementById('cat-count-critical')) document.getElementById('cat-count-critical').innerText = cCritical.toLocaleString();
+            if (document.getElementById('cat-count-hyper')) document.getElementById('cat-count-hyper').innerText = cHyper.toLocaleString();
+
+            // Filter Dataset
+            tableFilteredStations = allStations.filter(s => {
+                if (psFilter && (s.psname || '').trim() !== psFilter) return false;
+                if (routeFilter && (s.route_no || '').trim() !== routeFilter) return false;
+                
+                // Quick category pill filter
+                if (activeQuickCategory) {
+                    const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
+                    if (cat !== activeQuickCategory) return false;
+                }
+
+                // Distance filter
+                if (distFilter) {
+                    const d = parseFloat(s.distance_from_ps_kms) || 0;
+                    if (distFilter === 'near' && d > 5) return false;
+                    if (distFilter === 'medium' && (d <= 5 || d > 12)) return false;
+                    if (distFilter === 'far' && d <= 12) return false;
+                }
+
+                // Search query
+                if (search) {
+                    const rowText = `${s.psname || ''} ${s.mandal_zptc_segment || ''} ${s.mptc_segment || ''} ${s.polling_station_location || ''} ${s.route_staff || ''} ${s.blo_contact_no || ''} ${s.code || ''} ${s.id || ''}`.toLowerCase();
+                    if (!rowText.includes(search)) return false;
+                }
+                return true;
+            });
+
+            // Sorting logic
+            tableFilteredStations.sort((a, b) => {
+                let valA = a[tableSortColumn];
+                let valB = b[tableSortColumn];
+
+                if (tableSortColumn === 'sno' || tableSortColumn === 'id') {
+                    valA = parseInt(a.id, 10) || 0;
+                    valB = parseInt(b.id, 10) || 0;
+                } else if (tableSortColumn === 'no_of_voters') {
+                    valA = parseInt(a.no_of_voters, 10) || 0;
+                    valB = parseInt(b.no_of_voters, 10) || 0;
+                } else if (tableSortColumn === 'distance_from_ps_kms') {
+                    valA = parseFloat(a.distance_from_ps_kms) || 0;
+                    valB = parseFloat(b.distance_from_ps_kms) || 0;
+                } else {
+                    valA = (valA || '').toString().toLowerCase();
+                    valB = (valB || '').toString().toLowerCase();
+                }
+
+                if (valA < valB) return tableSortOrder === 'asc' ? -1 : 1;
+                if (valA > valB) return tableSortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Update Sort Icons in Headers
+            ['sno', 'id', 'mandal_zptc_segment', 'mptc_segment', 'route_no', 'psname', 'code', 'polling_station_location', 'no_of_voters', 'distance_from_ps_kms', 'categorization'].forEach(col => {
+                const iconEl = document.getElementById(`sort-icon-${col}`);
+                if (!iconEl) return;
+                if (tableSortColumn === col) {
+                    iconEl.innerHTML = tableSortOrder === 'asc' ? '▲' : '▼';
+                    iconEl.className = 'text-[10px] text-blue-400 font-bold ml-1';
+                } else {
+                    iconEl.innerHTML = '↕';
+                    iconEl.className = 'text-[9px] text-slate-500 font-normal ml-1';
+                }
+            });
+
+            // Update Record Count and Voters Sum
+            let currentVotersSum = 0;
+            tableFilteredStations.forEach(s => { currentVotersSum += (parseInt(s.no_of_voters, 10) || 0); });
+            document.getElementById('table-record-count').innerText = `Records: ${tableFilteredStations.length.toLocaleString()}`;
+            document.getElementById('table-voters-sum').innerText = `${currentVotersSum.toLocaleString()} Electors`;
+
+            // Pagination calculation
+            const totalRecords = tableFilteredStations.length;
+            const totalPages = Math.ceil(totalRecords / tablePageSize) || 1;
+            if (tableCurrentPage > totalPages) tableCurrentPage = totalPages;
+
+            const startIdx = (tableCurrentPage - 1) * tablePageSize;
+            const endIdx = Math.min(startIdx + tablePageSize, totalRecords);
+            const pageData = tableFilteredStations.slice(startIdx, endIdx);
+
+            document.getElementById('table-page-info').innerText = totalRecords > 0 
+                ? `Showing ${startIdx + 1} to ${endIdx} of ${totalRecords.toLocaleString()}`
+                : 'No records found';
+
+            const tbody = document.getElementById('master-table-tbody');
+            tbody.innerHTML = '';
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="p-8 text-center text-slate-400"><i class="fa-solid fa-folder-open text-2xl mb-2"></i><br>ఎలాంటి రికార్డులు కనుగొనబడలేదు (No matching records found).</td></tr>`;
+            } else {
+                pageData.forEach((s, idx) => {
+                    const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
+                    const badgeClass = SENSITIVITY_COLORS[cat]?.badge || 'bg-slate-100 text-slate-800';
+
+                    // Formatted phone numbers
+                    const formattedRouteStaff = formatPhoneLinks(s.route_staff);
+                    const formattedBlo = formatPhoneLinks(s.blo_contact_no);
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-blue-50/50 border-b border-slate-100 transition-colors align-middle">
+                            <td class="p-2 text-center text-slate-500 font-bold col-sno">${startIdx + idx + 1}</td>
+                            <td class="p-2 text-slate-500 font-mono col-id font-bold">${s.id}</td>
+                            <td class="p-2 font-medium text-slate-800 col-mandal">${s.mandal_zptc_segment || '-'}</td>
+                            <td class="p-2 text-slate-600 col-mptc">${s.mptc_segment || '-'}</td>
+                            <td class="p-2 text-center col-route">
+                                <span class="bg-blue-100 text-blue-900 font-bold px-2 py-0.5 rounded text-[10px] border border-blue-200">
+                                    Route ${s.route_no || '-'}
+                                </span>
+                            </td>
+                            <td class="p-2 font-bold text-slate-900 col-psname">${s.psname || '-'}</td>
+                            <td class="p-2 text-center col-code">
+                                <span class="bg-slate-100 text-slate-700 font-mono font-bold px-1.5 py-0.5 rounded border border-slate-300">
+                                    ${s.code || '-'}
+                                </span>
+                            </td>
+                            <td class="p-2 font-medium text-slate-800 whitespace-normal leading-snug max-w-sm col-location">
+                                ${s.polling_station_location || '-'}
+                            </td>
+                            <td class="p-2 text-center font-bold text-purple-700 col-voters">
+                                ${(parseInt(s.no_of_voters, 10) || 0).toLocaleString()}
+                            </td>
+                            <td class="p-2 text-center col-dist">
+                                <span class="bg-slate-50 text-slate-700 font-semibold px-2 py-0.5 rounded border border-slate-200">
+                                    ${s.distance_from_ps_kms ? s.distance_from_ps_kms + ' km' : '-'}
+                                </span>
+                            </td>
+                            <td class="p-2 text-center col-cat">
+                                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border ${badgeClass} inline-block shadow-sm">
+                                    ${cat}
+                                </span>
+                            </td>
+                            <td class="p-2 text-[10px] text-slate-800 whitespace-normal leading-tight col-staff max-w-xs">
+                                ${formattedRouteStaff}
+                            </td>
+                            <td class="p-2 text-[10px] text-slate-700 col-striking">
+                                ${s.asi_hc || '-'}
+                            </td>
+                            <td class="p-2 text-center col-force">
+                                <span class="text-[10px] bg-slate-100 text-slate-700 font-medium px-1.5 py-0.5 rounded border border-slate-200">
+                                    PC: ${s.pc || 0} | HG: ${s.hg || 0}
+                                </span>
+                            </td>
+                            <td class="p-2 text-[10px] text-slate-700 col-blo whitespace-normal leading-tight">
+                                ${formattedBlo}
+                            </td>
+                            <td class="p-2 font-mono text-[10px] text-slate-600 col-lat">${s.latitude || '-'}</td>
+                            <td class="p-2 font-mono text-[10px] text-slate-600 col-lng">${s.longitude || '-'}</td>
+                            <td class="p-2 text-center col-actions">
+                                <div class="flex items-center justify-center gap-1">
+                                    <button onclick="locateStationOnMap(${s.id})" title="Locate on Live Map" class="w-6 h-6 rounded bg-blue-100 hover:bg-blue-600 hover:text-white text-blue-700 flex items-center justify-center transition shadow-sm">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                    </button>
+                                    <button onclick="openEditModal(${s.id})" title="Edit Details" class="w-6 h-6 rounded bg-amber-100 hover:bg-amber-600 hover:text-white text-amber-700 flex items-center justify-center transition shadow-sm">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="deleteStation(${s.id})" title="Delete Station" class="w-6 h-6 rounded bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-700 flex items-center justify-center transition shadow-sm">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            renderPaginationButtons(totalPages);
+            applyColumnVisibility();
+        }
+
+        function renderPaginationButtons(totalPages) {
+            const container = document.getElementById('table-pagination-btns');
+            container.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            // First Page
+            container.innerHTML += `
+                <button onclick="goToTablePage(1)" ${tableCurrentPage === 1 ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="First Page"'}>
+                    <i class="fa-solid fa-angles-left"></i>
+                </button>
+            `;
+
+            // Prev
+            container.innerHTML += `
+                <button onclick="goToTablePage(${tableCurrentPage - 1})" ${tableCurrentPage === 1 ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="Previous Page"'}>
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+            `;
+
+            let startP = Math.max(1, tableCurrentPage - 2);
+            let endP = Math.min(totalPages, tableCurrentPage + 2);
+
+            for (let i = startP; i <= endP; i++) {
+                container.innerHTML += `
+                    <button onclick="goToTablePage(${i})" class="px-2.5 py-1 rounded border font-semibold ${i === tableCurrentPage ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-sm' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'}">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            // Next
+            container.innerHTML += `
+                <button onclick="goToTablePage(${tableCurrentPage + 1})" ${tableCurrentPage === totalPages ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="Next Page"'}>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            `;
+
+            // Last Page
+            container.innerHTML += `
+                <button onclick="goToTablePage(${totalPages})" ${tableCurrentPage === totalPages ? 'disabled class="px-2 py-1 bg-slate-100 text-slate-300 rounded cursor-not-allowed"' : 'class="px-2 py-1 bg-white hover:bg-slate-100 text-slate-700 rounded border border-slate-300" title="Last Page"'}>
+                    <i class="fa-solid fa-angles-right"></i>
+                </button>
+            `;
+        }
+
+        function goToTablePage(p) {
+            const totalPages = Math.ceil(tableFilteredStations.length / tablePageSize) || 1;
+            if (p < 1 || p > totalPages) return;
+            tableCurrentPage = p;
+            renderTable();
+        }
+
+        function locateStationOnMap(stationId) {
+            const station = allStations.find(s => s.id === stationId);
+            if (!station) return;
+
+            switchTab('map');
+            document.getElementById('map-filter-psname').value = station.psname || '';
+            onMapPSChange(station.psname || '');
+
+            setTimeout(() => {
+                const lat = parseFloat(station.latitude);
+                const lng = parseFloat(station.longitude);
+                if (!isNaN(lat) && !isNaN(lng) && mainMap) {
+                    mainMap.setView([lat, lng], 15);
+                    L.popup().setLatLng([lat, lng]).setContent(buildStationPopupHtml(station)).openOn(mainMap);
+                }
+            }, 300);
+        }
+
+        // ================= TAB 4: PS ROUTE WISE TRACKING =================
+        function initRouteMap() {
+            if (!routeMap) {
+                routeMap = L.map('route-map').setView([18.3, 83.9], 10);
+                const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(routeMap);
+
+                const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                    maxZoom: 20,
+                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                    attribution: '© Google Maps Satellite'
+                });
+
+                L.control.layers({
+                    "OpenStreetMap": osm,
+                    "Google Satellite Hybrid": googleHybrid
+                }, null, { position: 'topright' }).addTo(routeMap);
+            } else {
+                routeMap.invalidateSize();
+            }
+        }
+
+        function onRouteTabPSChange(psname) {
+            const routeSelect = document.getElementById('route-tab-routeno');
+            routeSelect.innerHTML = '<option value="">-- సెలెక్ట్ Route No --</option>';
+
+            if (psname) {
+                const routesInPS = new Set();
+                allStations.filter(s => (s.psname || '').trim() === psname.trim()).forEach(s => {
+                    if (s.route_no) routesInPS.add(s.route_no.trim());
+                });
+                Array.from(routesInPS).sort().forEach(r => {
+                    routeSelect.innerHTML += `<option value="${r}">రూట్ - ${r}</option>`;
+                });
+            }
+        }
+
+        function panRouteMapTo(lat, lng, idx) {
+            if (!routeMap) return;
+            routeMap.flyTo([lat, lng], 16, { animate: true, duration: 0.8 });
+        }
+
+        async function loadRouteWiseDetails() {
+            initRouteMap();
+
+            const selectedPS = (document.getElementById('route-tab-psname')?.value || '').trim();
+            const selectedRoute = (document.getElementById('route-tab-routeno')?.value || '').trim();
+            const selectedCat = (document.getElementById('route-tab-category')?.value || '').trim();
+
+            if (!selectedPS || !selectedRoute) {
+                alert('దయచేసి పోలీస్ స్టేషన్ మరియు రూట్ నంబర్ ఎంచుకోండి.');
+                return;
+            }
+
+            // All stations for this specific route (to compute totals and breakdown)
+            const routeStations = allStations.filter(s => (s.psname || '').trim() === selectedPS && (s.route_no || '').trim() === selectedRoute);
+
+            if (routeStations.length === 0) {
+                alert('ఈ రూట్ లో ఎలాంటి పోలింగ్ స్టేషన్లు లేవు.');
+                return;
+            }
+
+            // Calculate category counts for this route:
+            let rNorm = 0, rSens = 0, rCrit = 0, rHyp = 0, totalVoters = 0;
+            routeStations.forEach(s => {
+                const c = (s.categorization || 'NORMAL').trim().toUpperCase();
+                if (c === 'NORMAL') rNorm++;
+                else if (c === 'SENSITIVE') rSens++;
+                else if (c === 'CRITICAL') rCrit++;
+                else if (c === 'HYPER SENSITIVE') rHyp++;
+                totalVoters += (parseInt(s.no_of_voters, 10) || 0);
+            });
+
+            // Update Officer Header Card & Badges
+            const firstStation = routeStations[0];
+            document.getElementById('route-detail-badge').innerText = `ROUTE - ${selectedRoute} (${selectedPS})`;
+            document.getElementById('route-officer-name').innerText = firstStation.route_staff || 'Not Assigned';
+            document.getElementById('route-officer-ph').innerText = firstStation.route_staff_ph_no || 'N/A';
+            document.getElementById('route-total-stations').innerText = routeStations.length;
+            document.getElementById('route-total-voters').innerText = totalVoters.toLocaleString();
+
+            if (document.getElementById('route-count-normal')) document.getElementById('route-count-normal').innerText = rNorm;
+            if (document.getElementById('route-count-sensitive')) document.getElementById('route-count-sensitive').innerText = rSens;
+            if (document.getElementById('route-count-critical')) document.getElementById('route-count-critical').innerText = rCrit;
+            if (document.getElementById('route-count-hyper')) document.getElementById('route-count-hyper').innerText = rHyp;
+
+            // Apply category filter if selected:
+            let displayStations = routeStations;
+            if (selectedCat) {
+                displayStations = routeStations.filter(s => (s.categorization || 'NORMAL').trim().toUpperCase() === selectedCat);
+            }
+
+            if (document.getElementById('route-shown-count')) {
+                document.getElementById('route-shown-count').innerText = `${displayStations.length} of ${routeStations.length} Stations Shown`;
+            }
+            if (document.getElementById('route-map-legend-count')) {
+                document.getElementById('route-map-legend-count').innerText = `${displayStations.length} Stations`;
+            }
+
+            // Clear existing routeMap layers (markers & polylines)
+            routeMap.eachLayer(layer => {
+                if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+                    routeMap.removeLayer(layer);
+                }
+            });
+
+            // Add markers & populate itinerary list
+            const latlngs = [];
+            const listContainer = document.getElementById('route-stations-list');
+            listContainer.innerHTML = '';
+
+            if (displayStations.length === 0) {
+                listContainer.innerHTML = `<div class="p-4 text-center text-slate-500 text-xs">ఈ రూట్ లో ఎంపిక చేసిన కేటగిరీ (${selectedCat}) పోలింగ్ స్టేషన్లు లేవు.</div>`;
+                document.getElementById('route-total-km').innerText = '0.00 km';
+                return;
+            }
+
+            displayStations.forEach((s, idx) => {
+                const lat = parseFloat(s.latitude);
+                const lng = parseFloat(s.longitude);
+                const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
+                const badgeClass = SENSITIVITY_COLORS[cat]?.badge || 'bg-slate-100 text-slate-800';
+                const circleBg = cat === 'HYPER SENSITIVE' ? 'bg-rose-600 text-white ring-2 ring-rose-200' :
+                                 cat === 'CRITICAL' ? 'bg-orange-500 text-white ring-2 ring-orange-200' :
+                                 cat === 'SENSITIVE' ? 'bg-amber-500 text-white ring-2 ring-amber-200' :
+                                 'bg-emerald-600 text-white ring-2 ring-emerald-200';
+
+                if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                    latlngs.push([lat, lng]);
+
+                    const marker = L.marker([lat, lng], { icon: createStationMarkerIcon(cat, idx + 1) }).addTo(routeMap);
+                    marker.bindPopup(buildStationPopupHtml(s), { maxWidth: 320 });
+
+                    const loc = s.polling_station_location || `Station #${idx+1}`;
+                    marker.bindTooltip(`Station #${idx+1} [${cat}]: ${loc}`, { permanent: false, direction: 'top', className: 'ps-tooltip-badge' });
+                }
+
+                listContainer.innerHTML += `
+                    <div onclick="panRouteMapTo(${lat}, ${lng}, ${idx + 1})" class="p-2.5 rounded-lg border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md transition cursor-pointer flex items-start gap-2.5 shadow-sm">
+                        <div class="w-7 h-7 rounded-full ${circleBg} flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                            ${idx + 1}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start gap-1">
+                                <h4 class="font-bold text-slate-900 leading-snug text-xs hover:text-blue-700">${s.polling_station_location || 'N/A'}</h4>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold border ${badgeClass} shrink-0">${cat}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                                <span><b>Code:</b> <span class="font-mono text-slate-700">${s.code || '-'}</span></span>
+                                <span><b>Electors:</b> ${(parseInt(s.no_of_voters, 10) || 0).toLocaleString()}</span>
+                                <span><b>Distance:</b> ${s.distance_from_ps_kms || '-'} km</span>
+                                <span><b>BLO:</b> <a href="tel:${s.blo_contact_no}" class="text-blue-600 hover:underline font-semibold" onclick="event.stopPropagation()">${s.blo_contact_no || 'N/A'}</a></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Calculate OSRM Driving Distance & Route Track
+            if (latlngs.length >= 2) {
+                const coordString = latlngs.map(c => c[1] + ',' + c[0]).join(';');
+                const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson&steps=true`;
+
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                        const drivingKm = (route.distance / 1000).toFixed(2);
+                        document.getElementById('route-total-km').innerText = `${drivingKm} km (Real Road)`;
+
+                        L.polyline(routeCoords, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(routeMap);
+                        L.polyline(routeCoords, { color: '#dc2626', weight: 6, opacity: 1.0 }).addTo(routeMap);
+
+                        routeMap.fitBounds(routeCoords, { padding: [40, 40] });
+                    }
+                } catch(e) {
+                    console.warn('OSRM error, falling back to straight lines:', e);
+                    L.polyline(latlngs, { color: '#dc2626', weight: 4, dashArray: '5, 5' }).addTo(routeMap);
+                    routeMap.fitBounds(latlngs, { padding: [40, 40] });
+                }
+            } else if (latlngs.length === 1) {
+                routeMap.setView(latlngs[0], 14);
+                document.getElementById('route-total-km').innerText = '0.00 km (1 PS)';
+            }
+        }
+
+        // ================= ADD / EDIT / DELETE MODAL LOGIC =================
+        function openAddModal() {
+            document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-plus text-emerald-600"></i> Add New Polling Station';
+            document.getElementById('form-id').value = '';
+            document.getElementById('stationForm').reset();
+            document.getElementById('stationModal').classList.remove('hidden');
+        }
+
+        function openEditModal(id) {
+            const s = allStations.find(item => item.id === id);
+            if (!s) return;
+
+            document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-600"></i> Edit Polling Station';
+            document.getElementById('form-id').value = s.id;
+            document.getElementById('form-psname').value = s.psname || '';
+            document.getElementById('form-mandal').value = s.mandal_zptc_segment || '';
+            document.getElementById('form-mptc').value = s.mptc_segment || '';
+            document.getElementById('form-route').value = s.route_no || '';
+            document.getElementById('form-code').value = s.code || '';
+            document.getElementById('form-categorization').value = (s.categorization || 'NORMAL').trim().toUpperCase();
+            document.getElementById('form-location').value = s.polling_station_location || '';
+            document.getElementById('form-voters').value = s.no_of_voters || '';
+            document.getElementById('form-distance').value = s.distance_from_ps_kms || '';
+            document.getElementById('form-blo').value = s.blo_contact_no || '';
+            document.getElementById('form-routestaff').value = s.route_staff || '';
+            document.getElementById('form-asi').value = s.asi_hc || '';
+            document.getElementById('form-pc').value = s.pc || '';
+            document.getElementById('form-hg').value = s.hg || '';
+            document.getElementById('form-lat').value = s.latitude || '';
+            document.getElementById('form-lng').value = s.longitude || '';
+
+            document.getElementById('stationModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('stationModal').classList.add('hidden');
+        }
+
+        function saveStation(e) {
+            e.preventDefault();
+
+            const idVal = document.getElementById('form-id').value;
+            const isEdit = idVal !== '';
+
+            const stationData = {
+                id: isEdit ? parseInt(idVal, 10) : (Date.now()),
+                psname: document.getElementById('form-psname').value.trim(),
+                mandal_zptc_segment: document.getElementById('form-mandal').value.trim(),
+                mptc_segment: document.getElementById('form-mptc').value.trim(),
+                route_no: document.getElementById('form-route').value.trim(),
+                code: document.getElementById('form-code').value.trim(),
+                categorization: document.getElementById('form-categorization').value.trim().toUpperCase(),
+                polling_station_location: document.getElementById('form-location').value.trim(),
+                no_of_voters: parseInt(document.getElementById('form-voters').value, 10) || 0,
+                distance_from_ps_kms: document.getElementById('form-distance').value.trim(),
+                blo_contact_no: document.getElementById('form-blo').value.trim(),
+                route_staff: document.getElementById('form-routestaff').value.trim(),
+                asi_hc: document.getElementById('form-asi').value.trim(),
+                pc: parseInt(document.getElementById('form-pc').value, 10) || 0,
+                hg: parseInt(document.getElementById('form-hg').value, 10) || 0,
+                latitude: document.getElementById('form-lat').value.trim(),
+                longitude: document.getElementById('form-lng').value.trim()
+            };
+
+            if (isEdit) {
+                const idx = allStations.findIndex(s => s.id === stationData.id);
+                if (idx !== -1) allStations[idx] = stationData;
+            } else {
+                allStations.unshift(stationData);
+            }
+
+            saveDatasetLocally();
+            closeModal();
+            populateDropdowns();
+            renderDashboard();
+            renderTable();
+            if (mainMap) applyMapFilters();
+
+            alert(isEdit ? 'పోలింగ్ స్టేషన్ వివరాలు విజయవంతంగా అప్‌డేట్ అయ్యాయి!' : 'కొత్త పోలింగ్ స్టేషన్ విజయవంతంగా జోడించబడింది!');
+        }
+
+        function deleteStation(id) {
+            if (!confirm('ఈ పోలింగ్ స్టేషన్ రికార్డును ఖచ్చితంగా తొలగించాలనుకుంటున్నారా?')) return;
+
+            allStations = allStations.filter(s => s.id !== id);
+            saveDatasetLocally();
+            renderDashboard();
+            renderTable();
+            if (mainMap) applyMapFilters();
+        }
+
+        function pickCoordinatesOnMap() {
+            closeModal();
+            switchTab('map');
+            alert('మ్యాప్ పై మీకు కావాల్సిన ప్రదేశంలో క్లిక్ చేయండి. కోఆర్డినేట్స్ ఆటోమేటిక్‌గా కాపీ అవుతాయి.');
+
+            const onClickCoord = function(e) {
+                mainMap.off('click', onClickCoord);
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+                document.getElementById('form-lat').value = lat;
+                document.getElementById('form-lng').value = lng;
+                document.getElementById('stationModal').classList.remove('hidden');
+            };
+            mainMap.on('click', onClickCoord);
+        }
+
+        // ================= DATA BACKUP & EXCEL EXPORT =================
+        function openDataModal() {
+            document.getElementById('dataModal').classList.remove('hidden');
+        }
+
+        function closeDataModal() {
+            document.getElementById('dataModal').classList.add('hidden');
+        }
+
+        function downloadJsonBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allStations, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `police_election_stations_${new Date().toISOString().slice(0,10)}.json`);
+            dlAnchor.click();
+        }
+
+        function uploadJsonBackup() {
+            const fileInput = document.getElementById('json-upload-input');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('దయచేసి JSON ఫైల్ ను ఎంచుకోండి.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        allStations = parsed;
+                        saveDatasetLocally();
+                        populateDropdowns();
+                        renderDashboard();
+                        renderTable();
+                        if (mainMap) applyMapFilters();
+                        closeDataModal();
+                        alert(`${allStations.length} రికార్డులు విజయవంతంగా లోడ్ చేయబడ్డాయి!`);
+                    } else {
+                        alert('చెల్లని JSON ఫైల్ ఫార్మాట్.');
+                    }
+                } catch(err) {
+                    alert('JSON ఫైల్ చదవడంలో లోపం: ' + err.message);
+                }
+            };
+            reader.readAsText(fileInput.files[0]);
+        }
+
+        function resetDataToDefault() {
+            if (!confirm('అన్ని లోకల్ మార్పులను తొలగించి మొదటి రికార్డులకు రీసెట్ చేయాలనుకుంటున్నారా?')) return;
+            localStorage.removeItem('POLICE_ELECTION_STATIONS_DATA');
+            if (window.INITIAL_STATIONS) {
+                allStations = window.INITIAL_STATIONS;
+            }
+            populateDropdowns();
+            renderDashboard();
+            renderTable();
+            if (mainMap) applyMapFilters();
+            closeDataModal();
+            alert('డేటా విజయవంతంగా రీసెట్ చేయబడింది.');
+        }
+
+        function exportToExcel() {
+            const exportData = (tableFilteredStations && tableFilteredStations.length > 0 ? tableFilteredStations : allStations).map((s, idx) => ({
+                "S.No": idx + 1,
+                "ID": s.id || '',
+                "Police Station": s.psname || '',
+                "Mandal / ZPTC": s.mandal_zptc_segment || '',
+                "MPTC Segment": s.mptc_segment || '',
+                "Route No": s.route_no || '',
+                "PS Code": s.code || '',
+                "Polling Station Location": s.polling_station_location || '',
+                "Electors / Voters": s.no_of_voters || 0,
+                "Distance from PS (KMs)": s.distance_from_ps_kms || '',
+                "Sensitivity Category": (s.categorization || 'NORMAL').trim().toUpperCase(),
+                "Route Staff Details": s.route_staff || '',
+                "Staff Phone": s.route_staff_ph_no || '',
+                "BLO Contact": s.blo_contact_no || '',
+                "Striking Force": s.asi_hc || '',
+                "PC Count": s.pc || 0,
+                "HG Count": s.hg || 0,
+                "Latitude": s.latitude || '',
+                "Longitude": s.longitude || ''
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Polling Stations");
+            XLSX.writeFile(wb, `Election_Polling_Stations_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+    </script>
+</body>
+</html>
