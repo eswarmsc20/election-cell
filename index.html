@@ -187,72 +187,78 @@
 
         <!-- ================= TAB 1: EXECUTIVE DASHBOARD ================= -->
         <section id="tab-dashboard" class="space-y-3">
-            <!-- KPI Counters -->
+            <!-- KPI Counters with Transparent/Translucent Tinted Category Colors -->
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                <!-- Total Stations -->
+                <div class="p-3 rounded-xl shadow-sm border border-blue-200/90 bg-gradient-to-br from-blue-50/95 via-blue-50/40 to-white backdrop-blur-sm transition hover:shadow-md">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] uppercase font-bold text-slate-500">Total Stations</span>
-                        <div class="w-6 h-6 rounded bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                        <span class="text-[10px] uppercase font-bold text-blue-700">Total Stations</span>
+                        <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs shadow-inner">
                             <i class="fa-solid fa-person-shelter"></i>
                         </div>
                     </div>
-                    <div class="text-xl font-bold text-slate-900 mt-1" id="dash-total-ps">0</div>
-                    <span class="text-[10px] text-slate-500" id="dash-ps-count">0 Police Stations</span>
+                    <div class="text-xl font-black text-blue-950 mt-1" id="dash-total-ps">0</div>
+                    <span class="text-[10px] font-semibold text-blue-600" id="dash-ps-count">0 Police Stations</span>
                 </div>
 
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-emerald-500">
+                <!-- Normal (Translucent Green) -->
+                <div class="p-3 rounded-xl shadow-sm border border-emerald-300/90 border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50/95 via-emerald-50/40 to-white backdrop-blur-sm transition hover:shadow-md">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] uppercase font-bold text-emerald-700">Normal</span>
-                        <div class="w-6 h-6 rounded bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                        <span class="text-[10px] uppercase font-bold text-emerald-800">Normal</span>
+                        <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs shadow-inner">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
                     </div>
-                    <div class="text-xl font-bold text-emerald-700 mt-1" id="dash-normal-ps">0</div>
-                    <span class="text-[10px] text-emerald-600" id="dash-normal-pct">0% of total</span>
+                    <div class="text-xl font-black text-emerald-800 mt-1" id="dash-normal-ps">0</div>
+                    <span class="text-[10px] font-semibold text-emerald-700" id="dash-normal-pct">0% of total</span>
                 </div>
 
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-amber-500">
+                <!-- Sensitive (Translucent Amber) -->
+                <div class="p-3 rounded-xl shadow-sm border border-amber-300/90 border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50/95 via-amber-50/40 to-white backdrop-blur-sm transition hover:shadow-md">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] uppercase font-bold text-amber-700">Sensitive</span>
-                        <div class="w-6 h-6 rounded bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+                        <span class="text-[10px] uppercase font-bold text-amber-800">Sensitive</span>
+                        <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs shadow-inner">
                             <i class="fa-solid fa-triangle-exclamation"></i>
                         </div>
                     </div>
-                    <div class="text-xl font-bold text-amber-700 mt-1" id="dash-sensitive-ps">0</div>
-                    <span class="text-[10px] text-amber-600" id="dash-sensitive-pct">0% of total</span>
+                    <div class="text-xl font-black text-amber-800 mt-1" id="dash-sensitive-ps">0</div>
+                    <span class="text-[10px] font-semibold text-amber-700" id="dash-sensitive-pct">0% of total</span>
                 </div>
 
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-orange-500">
+                <!-- Critical (Translucent Orange) -->
+                <div class="p-3 rounded-xl shadow-sm border border-orange-300/90 border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50/95 via-orange-50/40 to-white backdrop-blur-sm transition hover:shadow-md">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] uppercase font-bold text-orange-700">Critical</span>
-                        <div class="w-6 h-6 rounded bg-orange-50 text-orange-600 flex items-center justify-center text-xs">
+                        <span class="text-[10px] uppercase font-bold text-orange-800">Critical</span>
+                        <div class="w-7 h-7 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center text-xs shadow-inner">
                             <i class="fa-solid fa-shield-virus"></i>
                         </div>
                     </div>
-                    <div class="text-xl font-bold text-orange-700 mt-1" id="dash-critical-ps">0</div>
-                    <span class="text-[10px] text-orange-600" id="dash-critical-pct">0% of total</span>
+                    <div class="text-xl font-black text-orange-800 mt-1" id="dash-critical-ps">0</div>
+                    <span class="text-[10px] font-semibold text-orange-700" id="dash-critical-pct">0% of total</span>
                 </div>
 
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 border-l-4 border-l-rose-600">
+                <!-- Hyper Sensitive (Translucent Rose) -->
+                <div class="p-3 rounded-xl shadow-sm border border-rose-300/90 border-l-4 border-l-rose-600 bg-gradient-to-br from-rose-50/95 via-rose-50/40 to-white backdrop-blur-sm transition hover:shadow-md">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] uppercase font-bold text-rose-700">Hyper Sensitive</span>
-                        <div class="w-6 h-6 rounded bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+                        <span class="text-[10px] uppercase font-bold text-rose-800">Hyper Sensitive</span>
+                        <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-xs shadow-inner">
                             <i class="fa-solid fa-land-mine-on"></i>
                         </div>
                     </div>
-                    <div class="text-xl font-bold text-rose-700 mt-1" id="dash-hypersensitive-ps">0</div>
-                    <span class="text-[10px] text-rose-600" id="dash-hypersensitive-pct">0% of total</span>
+                    <div class="text-xl font-black text-rose-800 mt-1" id="dash-hypersensitive-ps">0</div>
+                    <span class="text-[10px] font-semibold text-rose-700" id="dash-hypersensitive-pct">0% of total</span>
                 </div>
 
-                <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                <!-- Total Electors (Translucent Purple) -->
+                <div class="p-3 rounded-xl shadow-sm border border-purple-200/90 bg-gradient-to-br from-purple-50/95 via-purple-50/40 to-white backdrop-blur-sm transition hover:shadow-md">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] uppercase font-bold text-purple-700">Total Electors</span>
-                        <div class="w-6 h-6 rounded bg-purple-50 text-purple-600 flex items-center justify-center text-xs">
+                        <span class="text-[10px] uppercase font-bold text-purple-800">Total Electors</span>
+                        <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs shadow-inner">
                             <i class="fa-solid fa-users"></i>
                         </div>
                     </div>
-                    <div class="text-xl font-bold text-purple-700 mt-1" id="dash-total-voters">0</div>
-                    <span class="text-[10px] text-purple-600" id="dash-routes-count">0 Patrol Routes</span>
+                    <div class="text-xl font-black text-purple-900 mt-1" id="dash-total-voters">0</div>
+                    <span class="text-[10px] font-semibold text-purple-700" id="dash-routes-count">0 Patrol Routes</span>
                 </div>
             </div>
 
