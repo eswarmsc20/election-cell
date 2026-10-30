@@ -1025,12 +1025,13 @@
         };
 
         // Initialize App on DOM Ready
+        let isMainMapInitialized = false;
+        let isTableRendered = false;
+
         document.addEventListener('DOMContentLoaded', async () => {
             await initializeDataset();
             renderDashboard();
             populateDropdowns();
-            initMainMap();
-            renderTable();
 
             document.addEventListener('keydown', e => {
                 if (e.key === 'Escape') {
@@ -1039,7 +1040,26 @@
                     if (typeof closeModal === 'function') closeModal();
                 }
             });
+
+            // Lazy background map pre-initialization during browser idle time
+            // So that the initial page opens INSTANTLY in the blink of an eye!
+            const triggerIdleInit = () => {
+                if (!isMainMapInitialized) {
+                    initMainMapLazy();
+                }
+            };
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(triggerIdleInit, { timeout: 1200 });
+            } else {
+                setTimeout(triggerIdleInit, 400);
+            }
         });
+
+        function initMainMapLazy() {
+            if (isMainMapInitialized) return;
+            isMainMapInitialized = true;
+            initMainMap();
+        }
 
         // Initialize Data (LocalStorage -> window.INITIAL_STATIONS -> fetch fallback)
         async function initializeDataset() {
@@ -1095,18 +1115,22 @@
             });
 
             if (tabId === 'map') {
-                setTimeout(() => {
-                    if (mainMap) {
-                        mainMap.invalidateSize();
-                        applyMapFilters();
-                    }
-                }, 200);
+                if (!isMainMapInitialized) {
+                    initMainMapLazy();
+                } else {
+                    setTimeout(() => {
+                        if (mainMap) mainMap.invalidateSize();
+                    }, 50);
+                }
             } else if (tabId === 'routewise') {
                 setTimeout(() => {
                     initRouteMap();
-                }, 200);
+                }, 100);
             } else if (tabId === 'report') {
-                renderTable();
+                if (!isTableRendered) {
+                    renderTable();
+                    isTableRendered = true;
+                }
             } else if (tabId === 'dashboard') {
                 renderDashboard();
             }
@@ -1321,32 +1345,37 @@
         }
 
         function loadMandalBoundaries() {
-            fetch('BORDERSKL-Mandals.kmz')
-                .then(res => {
-                    if (!res.ok) throw new Error('KMZ not found');
-                    return res.arrayBuffer();
-                })
-                .then(data => JSZip.loadAsync(data))
-                .then(zip => {
-                    const kmlFileName = Object.keys(zip.files).find(name => name.toLowerCase().endsWith('.kml'));
-                    if (kmlFileName) {
-                        return zip.files[kmlFileName].async('string');
-                    }
-                    throw new Error('No KML inside KMZ');
-                })
-                .then(kmlText => {
-                    mandalBoundariesLayer = omnivore.kml.parse(kmlText, null, L.geoJson(null, {
-                        style: function() {
-                            return { color: "#2563eb", weight: 2, opacity: 0.85, fillOpacity: 0.08, interactive: false };
-                        },
-                        onEachFeature: function(feature, layer) {
-                            layer.options.interactive = false;
+            setTimeout(() => {
+                fetch('BORDERSKL-Mandals.kmz')
+                    .then(res => {
+                        if (!res.ok) throw new Error('KMZ not found');
+                        return res.arrayBuffer();
+                    })
+                    .then(data => JSZip.loadAsync(data))
+                    .then(zip => {
+                        const kmlFileName = Object.keys(zip.files).find(name => name.toLowerCase().endsWith('.kml'));
+                        if (kmlFileName) {
+                            return zip.files[kmlFileName].async('string');
                         }
-                    })).addTo(mainMap);
-                })
-                .catch(err => {
-                    console.warn('Could not load KMZ boundary file:', err);
-                });
+                        throw new Error('No KML inside KMZ');
+                    })
+                    .then(kmlText => {
+                        mandalBoundariesLayer = omnivore.kml.parse(kmlText, null, L.geoJson(null, {
+                            style: function() {
+                                return { color: "#2563eb", weight: 2, opacity: 0.85, fillOpacity: 0.08, interactive: false };
+                            },
+                            onEachFeature: function(feature, layer) {
+                                layer.options.interactive = false;
+                            }
+                        }));
+                        if (mainMap && document.getElementById('map-toggle-borders')?.checked) {
+                            mandalBoundariesLayer.addTo(mainMap);
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('Could not load KMZ boundary file:', err);
+                    });
+            }, 400);
         }
 
         function toggleBorders(show) {
@@ -1462,9 +1491,8 @@
                     const shortName = locName.length > 25 ? locName.substring(0, 25) + '...' : locName;
                     marker.bindTooltip(shortName, { direction: 'top', className: 'ps-tooltip-badge', offset: [0, -18] });
 
-                    // Popup Content
-                    const popupContent = buildStationPopupHtml(s);
-                    marker.bindPopup(popupContent, { maxWidth: 330 });
+                    // Lazy Popup Content (created on-demand when marker is clicked)
+                    marker.bindPopup(() => buildStationPopupHtml(s), { maxWidth: 330 });
 
                     // Group exclusively for this station's route
                     const rKey = `${s.psname || 'PS'}_${s.route_no || 'R'}`;
@@ -1993,12 +2021,23 @@
             }
         }
 
+        let routeCanvasRenderer = null;
+        function getRouteCanvasRenderer() {
+            if (!routeCanvasRenderer && mainMap) {
+                routeCanvasRenderer = L.canvas({ padding: 0.5 });
+            }
+            return routeCanvasRenderer;
+        }
+
         function drawRoadRouteFromGeometry(roadCoords, distKm, info, token) {
             if (token !== currentMapFilterToken || !mainRoutesGroup) return;
             if (!roadCoords || roadCoords.length < 2) return;
 
-            // Crisp white backing outline for maximum visibility
+            const renderer = getRouteCanvasRenderer();
+
+            // Crisp white backing outline for maximum visibility (GPU Canvas accelerated)
             const outline = L.polyline(roadCoords, {
+                renderer: renderer,
                 color: '#ffffff',
                 weight: 6.5,
                 opacity: 0.9,
@@ -2007,14 +2046,14 @@
 
             // True police patrol red road driving line
             const polyline = L.polyline(roadCoords, {
+                renderer: renderer,
                 color: '#dc2626',
                 weight: 4.5,
                 opacity: 0.95,
                 className: 'cursor-pointer'
             });
 
-            const popupHtml = buildRouteVillagesPopupHtml(info, distKm);
-            polyline.bindPopup(popupHtml, { maxWidth: 395, minWidth: 320, maxHeight: 460 });
+            polyline.bindPopup(() => buildRouteVillagesPopupHtml(info, distKm), { maxWidth: 395, minWidth: 320, maxHeight: 460 });
             polyline.bindTooltip(`<b>Route ${info.route || ''} (${info.ps || ''} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేయండి - ${(info.stations || []).length} గ్రామాల జాబితా</span>`, { sticky: true, className: 'ps-tooltip-badge' });
 
             mainRoutesGroup.addLayer(outline);
