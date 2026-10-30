@@ -264,32 +264,44 @@
 
 
 
-            <!-- Police Stations Quick Master Matrix -->
-            <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <!-- Police Stations Quick Master Matrix (Enlarged to fill full height down to bottom) -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-235px)] min-h-[520px]">
                 <div class="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2">
-                    <h3 class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                        <i class="fa-solid fa-building-shield text-blue-600"></i> Police Station Summary Matrix
-                    </h3>
-                    <span class="text-[10px] text-slate-500">Click on any PS to open live map</span>
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-building-shield text-blue-600"></i> Police Station Summary Matrix
+                        </h3>
+                        <span class="text-[10px] text-slate-600 font-bold bg-slate-200/80 px-2 py-0.5 rounded-full" id="dash-matrix-ps-count">30 Police Stations</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                            <input type="text" id="dash-matrix-search" oninput="filterPSMatrix()" placeholder="Search Police Station..." class="pl-7 pr-2.5 py-1 text-xs border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 bg-white w-44">
+                        </div>
+                        <span class="text-[10px] text-slate-500 hidden sm:inline"><i class="fa-solid fa-arrow-pointer text-blue-600 mr-1"></i>Click on any PS to open live map</span>
+                    </div>
                 </div>
-                <div class="overflow-x-auto max-h-72">
+                <div class="overflow-x-auto overflow-y-auto flex-1">
                     <table class="w-full text-left border-collapse text-[11px]">
-                        <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-200 font-semibold">
+                        <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-200 font-semibold z-10 shadow-xs">
                             <tr>
-                                <th class="p-2">Police Station</th>
-                                <th class="p-2 text-center">Total PS</th>
-                                <th class="p-2 text-center text-emerald-700">Normal</th>
-                                <th class="p-2 text-center text-amber-700">Sensitive</th>
-                                <th class="p-2 text-center text-orange-700">Critical</th>
-                                <th class="p-2 text-center text-rose-700">Hyper Sens.</th>
-                                <th class="p-2 text-center">Routes</th>
-                                <th class="p-2 text-center">Voters</th>
-                                <th class="p-2 text-center">Quick Action</th>
+                                <th class="p-2.5">Police Station</th>
+                                <th class="p-2.5 text-center">Total PS</th>
+                                <th class="p-2.5 text-center text-emerald-700">Normal</th>
+                                <th class="p-2.5 text-center text-amber-700">Sensitive</th>
+                                <th class="p-2.5 text-center text-orange-700">Critical</th>
+                                <th class="p-2.5 text-center text-rose-700">Hyper Sens.</th>
+                                <th class="p-2.5 text-center">Routes</th>
+                                <th class="p-2.5 text-center">Voters</th>
+                                <th class="p-2.5 text-center">Quick Action</th>
                             </tr>
                         </thead>
                         <tbody id="dash-matrix-tbody" class="divide-y divide-slate-100">
                             <!-- Populated dynamically -->
                         </tbody>
+                        <tfoot id="dash-matrix-tfoot" class="bg-slate-100 font-bold text-slate-900 sticky bottom-0 border-t-2 border-slate-300 z-10 shadow-xs">
+                            <!-- Totals summary row populated dynamically -->
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -1270,31 +1282,79 @@
             renderPSMatrix(psMap);
         }
 
+        let currentPsMap = {};
+
         function renderPSMatrix(psMap) {
+            currentPsMap = psMap || currentPsMap || {};
+            filterPSMatrix();
+        }
+
+        function filterPSMatrix() {
             const tbody = document.getElementById('dash-matrix-tbody');
+            const tfoot = document.getElementById('dash-matrix-tfoot');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
-            const sorted = Object.keys(psMap).sort();
+            const q = (document.getElementById('dash-matrix-search')?.value || '').trim().toLowerCase();
+            const sorted = Object.keys(currentPsMap).sort();
+
+            let totStations = 0, totNormal = 0, totSens = 0, totCrit = 0, totHyp = 0, totRoutes = 0, totVoters = 0;
+            let countShown = 0;
+
             sorted.forEach(ps => {
-                const info = psMap[ps];
+                const info = currentPsMap[ps];
+                totStations += info.total;
+                totNormal += info.normal;
+                totSens += info.sensitive;
+                totCrit += info.critical;
+                totHyp += info.hyper;
+                totRoutes += info.routes.size;
+                totVoters += info.voters;
+
+                if (q && !ps.toLowerCase().includes(q)) return;
+                countShown++;
+
                 tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="p-2 font-bold text-slate-800">${ps}</td>
-                        <td class="p-2 text-center font-bold">${info.total}</td>
-                        <td class="p-2 text-center font-semibold text-emerald-700">${info.normal}</td>
-                        <td class="p-2 text-center font-semibold text-amber-700">${info.sensitive}</td>
-                        <td class="p-2 text-center font-semibold text-orange-700">${info.critical}</td>
-                        <td class="p-2 text-center font-semibold text-rose-700">${info.hyper}</td>
-                        <td class="p-2 text-center">${info.routes.size}</td>
-                        <td class="p-2 text-center text-slate-600">${info.voters.toLocaleString()}</td>
-                        <td class="p-2 text-center">
-                            <button onclick="jumpToPSMap('${ps}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px] transition border border-blue-200">
+                    <tr class="hover:bg-blue-50/70 border-b border-slate-100 transition">
+                        <td class="p-2.5 font-bold text-slate-900">${ps}</td>
+                        <td class="p-2.5 text-center font-bold text-slate-800">${info.total}</td>
+                        <td class="p-2.5 text-center font-bold text-emerald-700 bg-emerald-50/30">${info.normal}</td>
+                        <td class="p-2.5 text-center font-bold text-amber-700 bg-amber-50/30">${info.sensitive}</td>
+                        <td class="p-2.5 text-center font-bold text-orange-700 bg-orange-50/30">${info.critical}</td>
+                        <td class="p-2.5 text-center font-bold text-rose-700 bg-rose-50/30">${info.hyper}</td>
+                        <td class="p-2.5 text-center font-semibold text-slate-700">${info.routes.size}</td>
+                        <td class="p-2.5 text-center text-slate-700 font-semibold">${info.voters.toLocaleString()}</td>
+                        <td class="p-2.5 text-center">
+                            <button onclick="jumpToPSMap('${ps}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2.5 py-1 rounded text-[10px] transition shadow-xs flex items-center justify-center gap-1 mx-auto cursor-pointer">
                                 <i class="fa-solid fa-map-location-dot"></i> View Map
                             </button>
                         </td>
                     </tr>
                 `;
             });
+
+            const countEl = document.getElementById('dash-matrix-ps-count');
+            if (countEl) countEl.innerText = `${countShown} Police Stations`;
+
+            if (tfoot) {
+                tfoot.innerHTML = `
+                    <tr>
+                        <td class="p-2.5 uppercase tracking-wide">District Total (${countShown} PS)</td>
+                        <td class="p-2.5 text-center font-black">${totStations.toLocaleString()}</td>
+                        <td class="p-2.5 text-center font-black text-emerald-800">${totNormal.toLocaleString()}</td>
+                        <td class="p-2.5 text-center font-black text-amber-800">${totSens.toLocaleString()}</td>
+                        <td class="p-2.5 text-center font-black text-orange-800">${totCrit.toLocaleString()}</td>
+                        <td class="p-2.5 text-center font-black text-rose-800">${totHyp.toLocaleString()}</td>
+                        <td class="p-2.5 text-center font-black">${totRoutes}</td>
+                        <td class="p-2.5 text-center font-black">${totVoters.toLocaleString()}</td>
+                        <td class="p-2.5 text-center">
+                            <button onclick="switchTab('map')" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-2.5 py-1 rounded text-[10px] shadow-xs cursor-pointer">
+                                <i class="fa-solid fa-globe"></i> All PS Map
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
         }
 
         function jumpToPSMap(psName) {
