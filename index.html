@@ -1298,12 +1298,10 @@
                 .then(kmlText => {
                     mandalBoundariesLayer = omnivore.kml.parse(kmlText, null, L.geoJson(null, {
                         style: function() {
-                            return { color: "#2563eb", weight: 2, opacity: 0.85, fillOpacity: 0.08 };
+                            return { color: "#2563eb", weight: 2, opacity: 0.85, fillOpacity: 0.08, interactive: false };
                         },
                         onEachFeature: function(feature, layer) {
-                            if (feature.properties && feature.properties.name) {
-                                layer.bindTooltip(`<b>Mandal:</b> ${feature.properties.name}`, { sticky: true });
-                            }
+                            layer.options.interactive = false;
                         }
                     })).addTo(mainMap);
                 })
@@ -1435,11 +1433,14 @@
                         routeGroups[rKey] = [];
                         routeStaffInfo[rKey] = {
                             staff: s.route_staff || 'Not Assigned',
+                            staff_phone: s.route_staff_ph_no || '',
                             ps: s.psname || '',
-                            route: s.route_no || ''
+                            route: s.route_no || '',
+                            stations: []
                         };
                     }
                     routeGroups[rKey].push(latLng);
+                    routeStaffInfo[rKey].stations.push(s);
                 }
             });
 
@@ -1611,6 +1612,119 @@
             `;
         }
 
+        function focusStationOnMap(lat, lng, stationId) {
+            if (!mainMap) return;
+            const fLat = parseFloat(lat);
+            const fLng = parseFloat(lng);
+            if (!isNaN(fLat) && !isNaN(fLng) && fLat !== 0 && fLng !== 0) {
+                mainMap.setView([fLat, fLng], 16);
+                const st = allStations.find(s => s.id === stationId);
+                if (st) {
+                    setTimeout(() => {
+                        L.popup().setLatLng([fLat, fLng]).setContent(buildStationPopupHtml(st)).openOn(mainMap);
+                    }, 200);
+                }
+            }
+        }
+
+        function buildRouteVillagesPopupHtml(info, distKm) {
+            const stations = info.stations || [];
+            let totalVoters = 0;
+            stations.forEach(s => {
+                totalVoters += (parseInt(s.no_of_voters, 10) || 0);
+            });
+
+            const distBadge = distKm 
+                ? `${distKm} KM Road Route` 
+                : (stations.length > 0 && stations[stations.length - 1].distance_from_ps_kms ? `~${stations[stations.length - 1].distance_from_ps_kms} KM from PS` : 'Patrol Route');
+
+            let listHtml = '';
+            stations.forEach((st, idx) => {
+                const cat = (st.categorization || 'NORMAL').trim().toUpperCase();
+                const badgeClass = SENSITIVITY_COLORS[cat]?.badge || 'bg-slate-100 text-slate-800';
+                const circleBg = cat === 'HYPER SENSITIVE' ? 'bg-rose-600 text-white' :
+                                 cat === 'CRITICAL' ? 'bg-orange-500 text-white' :
+                                 cat === 'SENSITIVE' ? 'bg-amber-500 text-white' :
+                                 'bg-emerald-600 text-white';
+                const distStr = st.distance_from_ps_kms ? `${st.distance_from_ps_kms} km` : '-';
+                const voters = (parseInt(st.no_of_voters, 10) || 0).toLocaleString();
+
+                listHtml += `
+                    <div onclick="focusStationOnMap(${st.latitude}, ${st.longitude}, ${st.id})" class="p-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 transition cursor-pointer flex items-start justify-between gap-2 shadow-xs group">
+                        <div class="flex items-start gap-2 min-w-0">
+                            <span class="w-5 h-5 rounded-full ${circleBg} flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5 shadow-xs">
+                                ${idx + 1}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-900 group-hover:text-blue-700 leading-snug text-xs truncate" title="${st.polling_station_location}">
+                                    ${st.polling_station_location || 'Polling Station'}
+                                </div>
+                                <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                                    <span>Code: <b class="text-slate-700 font-mono">${st.code || '-'}</b></span>
+                                    <span class="text-rose-700 font-bold"><i class="fa-solid fa-road text-[9px]"></i> ${distStr}</span>
+                                    <span><i class="fa-solid fa-users text-[9px]"></i> ${voters}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1 shrink-0">
+                            <span class="px-1.5 py-0.2 rounded text-[9px] font-bold border ${badgeClass}">${cat}</span>
+                            <span class="text-[9px] text-blue-600 font-bold group-hover:underline flex items-center gap-0.5">
+                                <i class="fa-solid fa-location-crosshairs text-[8px]"></i> View
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return `
+                <div class="p-1 font-sans text-xs max-w-sm">
+                    <!-- Route Header Banner -->
+                    <div class="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white p-2.5 rounded-lg shadow-sm mb-2">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="bg-white/20 text-white font-black px-2 py-0.5 rounded text-[10px] tracking-wide flex items-center gap-1">
+                                <i class="fa-solid fa-route"></i> ROUTE ${info.route}
+                            </span>
+                            <span class="text-[10px] font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded shadow-xs">
+                                ${distBadge}
+                            </span>
+                        </div>
+                        <h4 class="font-black text-sm text-white flex items-center gap-1.5 leading-tight">
+                            <i class="fa-solid fa-building-shield text-xs"></i> ${info.ps} Police Station
+                        </h4>
+                        <div class="text-[11px] text-red-100 mt-1 flex items-center justify-between">
+                            <span><b>Incharge:</b> ${info.staff || 'Patrol Officer'}</span>
+                            ${info.staff_phone ? `<a href="tel:${info.staff_phone}" class="bg-white text-red-700 font-bold px-1.5 py-0.2 rounded text-[10px] shadow-xs flex items-center gap-1 hover:bg-red-50"><i class="fa-solid fa-phone text-[8px]"></i> ${info.staff_phone}</a>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Route Summary Badges -->
+                    <div class="grid grid-cols-2 gap-1.5 mb-2 text-center text-[11px]">
+                        <div class="bg-blue-50 border border-blue-200 rounded p-1">
+                            <span class="text-slate-500 text-[10px] block">Polling Stations</span>
+                            <b class="text-blue-900 font-black text-xs">${stations.length} Stations</b>
+                        </div>
+                        <div class="bg-purple-50 border border-purple-200 rounded p-1">
+                            <span class="text-slate-500 text-[10px] block">Total Electors</span>
+                            <b class="text-purple-900 font-black text-xs">${totalVoters.toLocaleString()} Voters</b>
+                        </div>
+                    </div>
+
+                    <!-- Villages List Title -->
+                    <div class="flex items-center justify-between font-bold text-slate-800 text-xs border-b pb-1 mb-1.5">
+                        <span class="flex items-center gap-1 text-slate-900">
+                            <i class="fa-solid fa-list-check text-rose-600"></i> రూట్ లోని గ్రామాలు (${stations.length} Villages):
+                        </span>
+                        <span class="text-[10px] text-slate-500 font-normal">గ్రామంపై క్లిక్ చేసి చూడండి</span>
+                    </div>
+
+                    <!-- Scrollable Village Stations List -->
+                    <div class="max-h-64 overflow-y-auto space-y-1.5 pr-0.5">
+                        ${listHtml || '<div class="text-slate-400 text-center py-2">ఈ రూట్ లో ఎలాంటి పోలింగ్ స్టేషన్లు లేవు.</div>'}
+                    </div>
+                </div>
+            `;
+        }
+
         // Draw Driving Paths strictly for the active token & selected route
         async function drawRoadRoutesForMap(routeGroups, routeStaffInfo, token) {
             for (const rKey in routeGroups) {
@@ -1631,12 +1745,14 @@
                             const routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
                             const distKm = (data.routes[0].distance / 1000).toFixed(1);
 
-                            // White Outline
-                            const outline = L.polyline(routeCoords, { color: '#ffffff', weight: 6, opacity: 0.9 });
-                            // Main Red Road Line
-                            const polyline = L.polyline(routeCoords, { color: '#dc2626', weight: 4, opacity: 0.95 });
+                            // White Outline (non-interactive)
+                            const outline = L.polyline(routeCoords, { color: '#ffffff', weight: 8, opacity: 0.9, interactive: false });
+                            // Main Red Road Line (clickable, with hand cursor)
+                            const polyline = L.polyline(routeCoords, { color: '#dc2626', weight: 5, opacity: 0.95, className: 'cursor-pointer' });
 
-                            polyline.bindPopup(`<b>Route ${info.route} (${info.ps})</b><br>Staff: ${info.staff}<br>Total Driving Distance: <b>${distKm} km</b>`);
+                            const popupHtml = buildRouteVillagesPopupHtml(info, distKm);
+                            polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
+                            polyline.bindTooltip(`<b>Route ${info.route} (${info.ps} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేసి ఈ రూట్‌లోని గ్రామాల లిస్ట్ చూడండి (${(info.stations || []).length} గ్రామాలు)</span>`, { sticky: true, className: 'ps-tooltip-badge' });
 
                             if (mainRoutesGroup && token === currentMapFilterToken) {
                                 mainRoutesGroup.addLayer(outline);
@@ -1656,11 +1772,14 @@
             if (token !== currentMapFilterToken || !mainRoutesGroup) return;
             const polyline = L.polyline(coords, {
                 color: '#dc2626',
-                weight: 3,
-                opacity: 0.8,
-                dashArray: '6, 6'
+                weight: 4,
+                opacity: 0.85,
+                dashArray: '6, 6',
+                className: 'cursor-pointer'
             });
-            polyline.bindPopup(`<b>Route ${info.route || ''} (${info.ps || ''})</b><br>Staff: ${info.staff || 'N/A'}`);
+            const popupHtml = buildRouteVillagesPopupHtml(info, null);
+            polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
+            polyline.bindTooltip(`<b>Route ${info.route || ''} (${info.ps || ''} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేసి గ్రామాల లిస్ట్ చూడండి</span>`, { sticky: true, className: 'ps-tooltip-badge' });
             mainRoutesGroup.addLayer(polyline);
         }
 
