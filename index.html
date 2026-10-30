@@ -754,6 +754,88 @@
         </div>
     </div>
 
+    <!-- ================= ENLARGED ROUTE DETAILS MODAL ================= -->
+    <div id="enlarged-route-modal" class="hidden fixed inset-0 z-[2600] bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-300 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white p-4 flex justify-between items-start">
+                <div class="flex-1 min-w-0 pr-3">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <span id="enlarged-route-tag" class="bg-white/20 text-white font-black px-2.5 py-0.5 rounded text-xs tracking-wider flex items-center gap-1.5 shadow-2xs">
+                            <i class="fa-solid fa-route"></i> ROUTE -
+                        </span>
+                        <span id="enlarged-route-dist" class="text-xs font-bold bg-amber-400 text-slate-950 px-2.5 py-0.5 rounded shadow-2xs">
+                            - KM Road Route
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-black text-white flex items-center gap-2 leading-tight">
+                        <i class="fa-solid fa-building-shield"></i>
+                        <span id="enlarged-route-ps">Police Station</span>
+                    </h3>
+                    <div class="text-xs text-rose-100 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span id="enlarged-route-incharge"><b>Incharge:</b> -</span>
+                        <span id="enlarged-route-phone-container"></span>
+                    </div>
+                </div>
+                <button onclick="closeEnlargedRouteModal()" class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center transition text-base shrink-0 cursor-pointer" title="Close (Esc)">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Route Metrics KPI Strip -->
+            <div class="p-3 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
+                <div class="bg-white border border-slate-200 rounded-lg p-2 shadow-2xs">
+                    <span class="text-slate-500 text-[10px] uppercase font-bold block">Polling Stations</span>
+                    <b id="enlarged-route-stations-count" class="text-blue-900 font-black text-sm">0</b>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-lg p-2 shadow-2xs">
+                    <span class="text-slate-500 text-[10px] uppercase font-bold block">Total Electors</span>
+                    <b id="enlarged-route-voters-count" class="text-purple-900 font-black text-sm">0</b>
+                </div>
+                <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 shadow-2xs">
+                    <span class="text-emerald-700 text-[10px] uppercase font-bold block">Normal</span>
+                    <b id="enlarged-route-normal-count" class="text-emerald-950 font-black text-sm">0</b>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 shadow-2xs">
+                    <span class="text-amber-700 text-[10px] uppercase font-bold block">Sensitive</span>
+                    <b id="enlarged-route-sensitive-count" class="text-amber-950 font-black text-sm">0</b>
+                </div>
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-2 shadow-2xs">
+                    <span class="text-orange-700 text-[10px] uppercase font-bold block">Critical</span>
+                    <b id="enlarged-route-critical-count" class="text-orange-950 font-black text-sm">0</b>
+                </div>
+                <div class="bg-rose-50 border border-rose-200 rounded-lg p-2 shadow-2xs">
+                    <span class="text-rose-700 text-[10px] uppercase font-bold block">Hyper Sens.</span>
+                    <b id="enlarged-route-hyper-count" class="text-rose-950 font-black text-sm">0</b>
+                </div>
+            </div>
+
+            <!-- Search Filter Inside Route -->
+            <div class="px-4 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between gap-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="enlarged-route-search" oninput="filterEnlargedRouteVillages()" placeholder="ఈ రూట్ లోని గ్రామం లేదా పాఠశాల పేరును వెతకండి (Search Village / School in this route)..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 bg-white">
+                </div>
+                <span id="enlarged-route-shown-count" class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded border border-slate-200 whitespace-nowrap">
+                    0 Villages
+                </span>
+            </div>
+
+            <!-- Scrollable Table / Cards Body -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-2" id="enlarged-route-table-body">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs">
+                <span class="text-slate-500 text-[11px]"><i class="fa-solid fa-circle-info text-blue-600 mr-1"></i>ఏదైనా గ్రామంపై క్లిక్ చేస్తే మ్యాప్‌పై నేరుగా ఆ లొకేషన్‌కు జూమ్ అవుతుంది.</span>
+                <button onclick="closeEnlargedRouteModal()" class="px-4 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-lg transition shadow-xs cursor-pointer">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= ADD / EDIT POLLING STATION MODAL ================= -->
     <div id="stationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 z-[2000]">
         <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full p-4 sm:p-5 max-h-[92vh] overflow-y-auto border border-slate-300">
@@ -949,6 +1031,14 @@
             populateDropdowns();
             initMainMap();
             renderTable();
+
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') {
+                    if (typeof closeEnlargedRouteModal === 'function') closeEnlargedRouteModal();
+                    if (typeof closeAllRoutesModal === 'function') closeAllRoutesModal();
+                    if (typeof closeModal === 'function') closeModal();
+                }
+            });
         });
 
         // Initialize Data (LocalStorage -> window.INITIAL_STATIONS -> fetch fallback)
@@ -1585,13 +1675,32 @@
         function buildRouteVillagesPopupHtml(info, distKm) {
             const stations = info.stations || [];
             let totalVoters = 0;
+            let nNormal = 0, nSensitive = 0, nCritical = 0, nHyper = 0;
             stations.forEach(s => {
                 totalVoters += (parseInt(s.no_of_voters, 10) || 0);
+                const cat = (s.categorization || 'NORMAL').trim().toUpperCase();
+                if (cat === 'HYPER SENSITIVE') nHyper++;
+                else if (cat === 'CRITICAL') nCritical++;
+                else if (cat === 'SENSITIVE') nSensitive++;
+                else nNormal++;
             });
 
             const distBadge = distKm 
                 ? `${distKm} KM Road Route` 
                 : (stations.length > 0 && stations[stations.length - 1].distance_from_ps_kms ? `~${stations[stations.length - 1].distance_from_ps_kms} KM from PS` : 'Patrol Route');
+
+            const rKey = `${info.ps || 'PS'}_${info.route || 'R'}`.replace(/[^a-zA-Z0-9_]/g, '_');
+            window.ROUTE_MODAL_CACHE = window.ROUTE_MODAL_CACHE || {};
+            window.ROUTE_MODAL_CACHE[rKey] = {
+                info: info,
+                distKm: distKm,
+                distBadge: distBadge,
+                nNormal: nNormal,
+                nSensitive: nSensitive,
+                nCritical: nCritical,
+                nHyper: nHyper,
+                totalVoters: totalVoters
+            };
 
             let listHtml = '';
             stations.forEach((st, idx) => {
@@ -1639,9 +1748,14 @@
                             <span class="bg-white/20 text-white font-black px-2 py-0.5 rounded text-[10px] tracking-wide flex items-center gap-1">
                                 <i class="fa-solid fa-route"></i> ROUTE ${info.route}
                             </span>
-                            <span class="text-[10px] font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded shadow-xs">
-                                ${distBadge}
-                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded shadow-xs">
+                                    ${distBadge}
+                                </span>
+                                <button onclick="openEnlargedRouteModal('${rKey}')" title="పెద్దగా చూడండి (Enlarge View)" class="bg-white text-red-700 hover:bg-amber-300 hover:text-slate-950 px-2 py-0.5 rounded text-[10px] font-black tracking-wide shadow-xs flex items-center gap-1 transition cursor-pointer">
+                                    <i class="fa-solid fa-up-right-and-down-left-from-center text-[9px]"></i> Enlarge
+                                </button>
+                            </div>
                         </div>
                         <h4 class="font-black text-sm text-white flex items-center gap-1.5 leading-tight">
                             <i class="fa-solid fa-building-shield text-xs"></i> ${info.ps} Police Station
@@ -1653,7 +1767,7 @@
                     </div>
 
                     <!-- Route Summary Badges -->
-                    <div class="grid grid-cols-2 gap-1.5 mb-2 text-center text-[11px]">
+                    <div class="grid grid-cols-2 gap-1.5 mb-1.5 text-center text-[11px]">
                         <div class="bg-blue-50 border border-blue-200 rounded p-1">
                             <span class="text-slate-500 text-[10px] block">Polling Stations</span>
                             <b class="text-blue-900 font-black text-xs">${stations.length} Stations</b>
@@ -1661,6 +1775,26 @@
                         <div class="bg-purple-50 border border-purple-200 rounded p-1">
                             <span class="text-slate-500 text-[10px] block">Total Electors</span>
                             <b class="text-purple-900 font-black text-xs">${totalVoters.toLocaleString()} Voters</b>
+                        </div>
+                    </div>
+
+                    <!-- Sensitivity Category Breakdown (Requested by User) -->
+                    <div class="grid grid-cols-4 gap-1 mb-2 text-center text-[10px]">
+                        <div class="bg-emerald-50 border border-emerald-300 rounded p-1 shadow-2xs">
+                            <span class="text-emerald-700 font-bold block text-[9px] uppercase">Normal</span>
+                            <b class="text-emerald-950 font-black text-xs">${nNormal}</b>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-300 rounded p-1 shadow-2xs">
+                            <span class="text-amber-700 font-bold block text-[9px] uppercase">Sensitive</span>
+                            <b class="text-amber-950 font-black text-xs">${nSensitive}</b>
+                        </div>
+                        <div class="bg-orange-50 border border-orange-300 rounded p-1 shadow-2xs">
+                            <span class="text-orange-700 font-bold block text-[9px] uppercase">Critical</span>
+                            <b class="text-orange-950 font-black text-xs">${nCritical}</b>
+                        </div>
+                        <div class="bg-rose-50 border border-rose-300 rounded p-1 shadow-2xs">
+                            <span class="text-rose-700 font-bold block text-[9px] uppercase">Hyper Sens.</span>
+                            <b class="text-rose-950 font-black text-xs">${nHyper}</b>
                         </div>
                     </div>
 
@@ -1678,6 +1812,158 @@
                     </div>
                 </div>
             `;
+        }
+
+        // ================= ENLARGED ROUTE DETAILS MODAL LOGIC =================
+        let activeEnlargedRouteKey = null;
+
+        function openEnlargedRouteModal(rKey) {
+            const cached = window.ROUTE_MODAL_CACHE && window.ROUTE_MODAL_CACHE[rKey];
+            if (!cached) return;
+            activeEnlargedRouteKey = rKey;
+
+            const modal = document.getElementById('enlarged-route-modal');
+            if (!modal) return;
+
+            const { info, distBadge, nNormal, nSensitive, nCritical, nHyper, totalVoters } = cached;
+            const stations = info.stations || [];
+
+            document.getElementById('enlarged-route-tag').innerHTML = `<i class="fa-solid fa-route mr-1"></i> ROUTE ${info.route}`;
+            document.getElementById('enlarged-route-dist').innerText = distBadge;
+            document.getElementById('enlarged-route-ps').innerText = `${info.ps} Police Station`;
+            document.getElementById('enlarged-route-incharge').innerHTML = `<b>Incharge:</b> ${info.staff || 'Patrol Officer'}`;
+            
+            const phoneContainer = document.getElementById('enlarged-route-phone-container');
+            if (info.staff_phone) {
+                phoneContainer.innerHTML = `<a href="tel:${info.staff_phone}" class="bg-white text-red-700 font-bold px-2 py-0.5 rounded text-xs shadow-xs flex items-center gap-1 hover:bg-red-50"><i class="fa-solid fa-phone text-[10px]"></i> ${info.staff_phone}</a>`;
+            } else {
+                phoneContainer.innerHTML = '';
+            }
+
+            document.getElementById('enlarged-route-stations-count').innerText = `${stations.length} Stations`;
+            document.getElementById('enlarged-route-voters-count').innerText = `${totalVoters.toLocaleString()} Voters`;
+            document.getElementById('enlarged-route-normal-count').innerText = nNormal;
+            document.getElementById('enlarged-route-sensitive-count').innerText = nSensitive;
+            document.getElementById('enlarged-route-critical-count').innerText = nCritical;
+            document.getElementById('enlarged-route-hyper-count').innerText = nHyper;
+
+            const searchInput = document.getElementById('enlarged-route-search');
+            if (searchInput) searchInput.value = '';
+
+            renderEnlargedRouteVillagesList(stations);
+            modal.classList.remove('hidden');
+        }
+
+        function closeEnlargedRouteModal() {
+            const modal = document.getElementById('enlarged-route-modal');
+            if (modal) modal.classList.add('hidden');
+            activeEnlargedRouteKey = null;
+        }
+
+        function filterEnlargedRouteVillages() {
+            if (!activeEnlargedRouteKey) return;
+            const cached = window.ROUTE_MODAL_CACHE && window.ROUTE_MODAL_CACHE[activeEnlargedRouteKey];
+            if (!cached) return;
+
+            const q = (document.getElementById('enlarged-route-search')?.value || '').trim().toLowerCase();
+            const stations = cached.info.stations || [];
+            const filtered = stations.filter(s => {
+                if (!q) return true;
+                const loc = (s.polling_station_location || '').toLowerCase();
+                const code = String(s.code || '').toLowerCase();
+                const cat = (s.categorization || '').toLowerCase();
+                return loc.includes(q) || code.includes(q) || cat.includes(q);
+            });
+
+            renderEnlargedRouteVillagesList(filtered);
+        }
+
+        function renderEnlargedRouteVillagesList(stations) {
+            const container = document.getElementById('enlarged-route-table-body');
+            const countEl = document.getElementById('enlarged-route-shown-count');
+            if (!container) return;
+
+            if (countEl) countEl.innerText = `${stations.length} Villages Shown`;
+
+            if (stations.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm font-semibold">ఎలాంటి గ్రామాలు కనుగొనబడలేదు (No matching villages found).</div>`;
+                return;
+            }
+
+            let html = `
+                <div class="overflow-x-auto rounded-lg border border-slate-200">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead class="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-200 font-bold uppercase text-[10px]">
+                            <tr>
+                                <th class="p-2.5 text-center w-10">#</th>
+                                <th class="p-2.5">Polling Station / Village Name</th>
+                                <th class="p-2.5 text-center">PS Code</th>
+                                <th class="p-2.5 text-center">Category</th>
+                                <th class="p-2.5 text-center">Dist. from PS</th>
+                                <th class="p-2.5 text-center">Voters</th>
+                                <th class="p-2.5 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">
+            `;
+
+            stations.forEach((st, idx) => {
+                const cat = (st.categorization || 'NORMAL').trim().toUpperCase();
+                const badgeClass = SENSITIVITY_COLORS[cat]?.badge || 'bg-slate-100 text-slate-800';
+                const circleBg = cat === 'HYPER SENSITIVE' ? 'bg-rose-600 text-white' :
+                                 cat === 'CRITICAL' ? 'bg-orange-500 text-white' :
+                                 cat === 'SENSITIVE' ? 'bg-amber-500 text-white' :
+                                 'bg-emerald-600 text-white';
+                const distStr = st.distance_from_ps_kms ? `${st.distance_from_ps_kms} KM` : '-';
+                const voters = (parseInt(st.no_of_voters, 10) || 0).toLocaleString();
+                const lat = parseFloat(st.latitude);
+                const lng = parseFloat(st.longitude);
+                const hasGps = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
+
+                html += `
+                    <tr class="hover:bg-blue-50/60 transition">
+                        <td class="p-2.5 text-center font-bold">
+                            <span class="w-6 h-6 rounded-full ${circleBg} inline-flex items-center justify-center font-bold text-xs shadow-2xs">
+                                ${idx + 1}
+                            </span>
+                        </td>
+                        <td class="p-2.5 font-bold text-slate-900 leading-snug">
+                            <div>${st.polling_station_location || 'Polling Station'}</div>
+                            <div class="text-[10px] text-slate-500 font-normal mt-0.5">Mandal: ${st.mandal || 'Srikakulam'} | LatLng: ${hasGps ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'N/A'}</div>
+                        </td>
+                        <td class="p-2.5 text-center font-mono font-bold text-slate-700">${st.code || '-'}</td>
+                        <td class="p-2.5 text-center">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-black border ${badgeClass} uppercase whitespace-nowrap">${cat}</span>
+                        </td>
+                        <td class="p-2.5 text-center font-bold text-rose-700 whitespace-nowrap">
+                            <i class="fa-solid fa-road text-[10px] mr-1"></i>${distStr}
+                        </td>
+                        <td class="p-2.5 text-center font-semibold text-slate-700 whitespace-nowrap">
+                            <i class="fa-solid fa-users text-[10px] text-slate-400 mr-1"></i>${voters}
+                        </td>
+                        <td class="p-2.5 text-center whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1.5">
+                                ${hasGps ? `
+                                    <button onclick="closeEnlargedRouteModal(); focusStationOnMap(${lat}, ${lng}, ${st.id});" class="px-2 py-1 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-300 hover:border-blue-600 rounded text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Zoom on Map">
+                                        <i class="fa-solid fa-location-crosshairs"></i> View on Map
+                                    </button>
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-300 hover:border-emerald-600 rounded text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Google Maps Navigation">
+                                        <i class="fa-solid fa-diamond-turn-right"></i> Navigate
+                                    </a>
+                                ` : '<span class="text-slate-400 italic text-[10px]">No GPS</span>'}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
         }
 
         // Draw Driving Paths strictly for the active token & selected route
@@ -1728,7 +2014,7 @@
             });
 
             const popupHtml = buildRouteVillagesPopupHtml(info, distKm);
-            polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
+            polyline.bindPopup(popupHtml, { maxWidth: 395, minWidth: 320, maxHeight: 460 });
             polyline.bindTooltip(`<b>Route ${info.route || ''} (${info.ps || ''} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేయండి - ${(info.stations || []).length} గ్రామాల జాబితా</span>`, { sticky: true, className: 'ps-tooltip-badge' });
 
             mainRoutesGroup.addLayer(outline);
@@ -1754,7 +2040,7 @@
             });
 
             const popupHtml = buildRouteVillagesPopupHtml(info, null);
-            polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
+            polyline.bindPopup(popupHtml, { maxWidth: 395, minWidth: 320, maxHeight: 460 });
             polyline.bindTooltip(`<b>Route ${info.route || ''} (${info.ps || ''} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేయండి - ${(info.stations || []).length} గ్రామాల జాబితా</span>`, { sticky: true, className: 'ps-tooltip-badge' });
 
             mainRoutesGroup.addLayer(outline);
@@ -1778,7 +2064,7 @@
                     const polyline = L.polyline(routeCoords, { color: '#dc2626', weight: 5, opacity: 0.95, className: 'cursor-pointer' });
 
                     const popupHtml = buildRouteVillagesPopupHtml(info, distKm);
-                    polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
+                    polyline.bindPopup(popupHtml, { maxWidth: 395, minWidth: 320, maxHeight: 460 });
                     polyline.bindTooltip(`<b>Route ${info.route} (${info.ps} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేసి ఈ రూట్‌లోని గ్రామాల లిస్ట్ చూడండి (${(info.stations || []).length} గ్రామాలు)</span>`, { sticky: true, className: 'ps-tooltip-badge' });
 
                     if (mainRoutesGroup && token === currentMapFilterToken) {
