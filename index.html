@@ -11,6 +11,10 @@
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet MarkerCluster for clean uncluttered map rendering -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <!-- Leaflet Omnivore & JSZip for KMZ extraction -->
     <script src="https://unpkg.com/@mapbox/leaflet-omnivore@0.3.4/leaflet-omnivore.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -20,6 +24,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
+        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+            background-color: rgba(30, 64, 175, 0.35) !important;
+            border-radius: 50% !important;
+        }
+        .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
+            background-color: #1e3a8a !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            font-size: 11px !important;
+            font-family: system-ui, sans-serif !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35) !important;
+        }
         .ps-tooltip-badge {
             background-color: rgba(255, 255, 255, 0.96);
             border: 1px solid #2563eb;
@@ -378,9 +394,12 @@
                         </label>
                     </div>
 
-                    <div class="flex items-center gap-1">
-                        <button onclick="resetMapFilters()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2 py-1 rounded text-xs transition flex items-center justify-center gap-1">
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="resetMapFilters()" class="w-1/2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2 py-1 rounded text-xs transition flex items-center justify-center gap-1" title="Reset Filters">
                             <i class="fa-solid fa-arrows-rotate"></i> Reset
+                        </button>
+                        <button onclick="openAllRoutesModal()" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-1.5 py-1 rounded text-xs transition flex items-center justify-center gap-1 shadow-sm whitespace-nowrap" title="View all routes & villages directory">
+                            <i class="fa-solid fa-list-ol"></i> Routes
                         </button>
                     </div>
                 </div>
@@ -744,6 +763,41 @@
         </section>
 
     </main>
+
+    <!-- ================= ALL ROUTES & VILLAGES DIRECTORY MODAL ================= -->
+    <div id="all-routes-modal" class="hidden fixed inset-0 z-[2500] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-3.5 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-route text-amber-400"></i>
+                        <span>District Police Patrol Routes & Villages (రూట్లు & గ్రామాల డైరెక్టరీ)</span>
+                    </h3>
+                    <p class="text-[11px] text-blue-200 mt-0.5">ఏదైనా రూట్ ఎంచుకుంటే మ్యాప్‌పై ఆ రూట్‌లోని గ్రామాల పూర్తి వివరాలు కనిపిస్తాయి.</p>
+                </div>
+                <button onclick="closeAllRoutesModal()" class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition text-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Search Input -->
+            <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="routes-modal-search" oninput="renderRoutesDirectory()" placeholder="Search Police Station, Route or Village name..." class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white">
+                </div>
+                <span id="routes-modal-count" class="text-xs font-bold text-slate-600 bg-white px-2.5 py-1.5 rounded border border-slate-200 whitespace-nowrap">
+                    0 Routes
+                </span>
+            </div>
+
+            <!-- Scrollable Routes List -->
+            <div id="routes-modal-list" class="flex-1 overflow-y-auto p-3 space-y-2.5">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
 
     <!-- ================= ADD / EDIT POLLING STATION MODAL ================= -->
     <div id="stationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-3 z-[2000]">
@@ -1270,8 +1324,17 @@
                 "Carto Light Clean": cartoLight
             }, null, { position: 'topright' }).addTo(mainMap);
 
-            // Initialize isolated layer groups
-            mainMarkersGroup = L.layerGroup().addTo(mainMap);
+            // Initialize isolated layer groups with MarkerCluster support
+            if (typeof L.markerClusterGroup === 'function') {
+                mainMarkersGroup = L.markerClusterGroup({
+                    maxClusterRadius: 35,
+                    disableClusteringAtZoom: 13,
+                    spiderfyOnMaxZoom: true,
+                    showCoverageOnHover: false
+                }).addTo(mainMap);
+            } else {
+                mainMarkersGroup = L.layerGroup().addTo(mainMap);
+            }
             mainRoutesGroup = L.layerGroup().addTo(mainMap);
 
             // Load Mandal Boundaries from KMZ using JSZip
@@ -1491,9 +1554,8 @@
                 banner.classList.add('hidden');
             }
 
-            // Draw road routes ONLY for the selected stations/route, and ONLY when toggled
-            // Never draw routes across the entire district at once (prevents ghost lines & rate limits)
-            const canDrawRoutes = document.getElementById('map-toggle-routes').checked && (selectedPS || selectedRoute || Object.keys(routeGroups).length <= 4);
+            // Draw road routes whenever toggled (both for individual PS and district-wide All PS view)
+            const canDrawRoutes = document.getElementById('map-toggle-routes').checked;
             if (canDrawRoutes && Object.keys(routeGroups).length > 0) {
                 drawRoadRoutesForMap(routeGroups, routeStaffInfo, thisToken);
             }
@@ -1727,60 +1789,193 @@
 
         // Draw Driving Paths strictly for the active token & selected route
         async function drawRoadRoutesForMap(routeGroups, routeStaffInfo, token) {
-            for (const rKey in routeGroups) {
+            const rKeys = Object.keys(routeGroups);
+            const isManyRoutes = rKeys.length > 6;
+
+            for (const rKey of rKeys) {
                 if (token !== currentMapFilterToken) return;
 
                 const coords = routeGroups[rKey];
-                if (coords.length > 1) {
-                    const coordString = coords.map(c => c[1] + ',' + c[0]).join(';');
-                    const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
-                    const info = routeStaffInfo[rKey] || {};
+                const info = routeStaffInfo[rKey] || {};
+                if (!coords || coords.length < 2) continue;
 
-                    try {
-                        const res = await fetch(url);
-                        if (token !== currentMapFilterToken) return;
-
-                        const data = await res.json();
-                        if (data.routes && data.routes.length > 0) {
-                            const routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                            const distKm = (data.routes[0].distance / 1000).toFixed(1);
-
-                            // White Outline (non-interactive)
-                            const outline = L.polyline(routeCoords, { color: '#ffffff', weight: 8, opacity: 0.9, interactive: false });
-                            // Main Red Road Line (clickable, with hand cursor)
-                            const polyline = L.polyline(routeCoords, { color: '#dc2626', weight: 5, opacity: 0.95, className: 'cursor-pointer' });
-
-                            const popupHtml = buildRouteVillagesPopupHtml(info, distKm);
-                            polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
-                            polyline.bindTooltip(`<b>Route ${info.route} (${info.ps} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేసి ఈ రూట్‌లోని గ్రామాల లిస్ట్ చూడండి (${(info.stations || []).length} గ్రామాలు)</span>`, { sticky: true, className: 'ps-tooltip-badge' });
-
-                            if (mainRoutesGroup && token === currentMapFilterToken) {
-                                mainRoutesGroup.addLayer(outline);
-                                mainRoutesGroup.addLayer(polyline);
-                            }
-                        } else {
-                            fallbackDirectLine(coords, info, token);
-                        }
-                    } catch(e) {
-                        fallbackDirectLine(coords, info, token);
-                    }
+                if (isManyRoutes) {
+                    // For district-wide view with all routes across Srikakulam, draw all route lines instantly
+                    drawInstantRouteLine(coords, info, token);
+                } else {
+                    // For selected PS or individual route, fetch full OSRM driving geometry
+                    await fetchAndDrawOSRMRoute(coords, info, token);
                 }
             }
         }
 
-        function fallbackDirectLine(coords, info, token) {
+        function drawInstantRouteLine(coords, info, token) {
             if (token !== currentMapFilterToken || !mainRoutesGroup) return;
+            if (coords.length < 2) return;
+
+            const outline = L.polyline(coords, {
+                color: '#ffffff',
+                weight: 7,
+                opacity: 0.9,
+                interactive: false
+            });
+
             const polyline = L.polyline(coords, {
                 color: '#dc2626',
-                weight: 4,
-                opacity: 0.85,
-                dashArray: '6, 6',
+                weight: 4.5,
+                opacity: 0.92,
                 className: 'cursor-pointer'
             });
+
             const popupHtml = buildRouteVillagesPopupHtml(info, null);
             polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
-            polyline.bindTooltip(`<b>Route ${info.route || ''} (${info.ps || ''} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేసి గ్రామాల లిస్ట్ చూడండి</span>`, { sticky: true, className: 'ps-tooltip-badge' });
+            polyline.bindTooltip(`<b>Route ${info.route || ''} (${info.ps || ''} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేయండి - ${(info.stations || []).length} గ్రామాల జాబితా</span>`, { sticky: true, className: 'ps-tooltip-badge' });
+
+            mainRoutesGroup.addLayer(outline);
             mainRoutesGroup.addLayer(polyline);
+        }
+
+        async function fetchAndDrawOSRMRoute(coords, info, token) {
+            const coordString = coords.map(c => c[1] + ',' + c[0]).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
+
+            try {
+                const res = await fetch(url);
+                if (token !== currentMapFilterToken) return;
+
+                const data = await res.json();
+                if (data.routes && data.routes.length > 0) {
+                    const routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    const distKm = (data.routes[0].distance / 1000).toFixed(1);
+
+                    const outline = L.polyline(routeCoords, { color: '#ffffff', weight: 8, opacity: 0.9, interactive: false });
+                    const polyline = L.polyline(routeCoords, { color: '#dc2626', weight: 5, opacity: 0.95, className: 'cursor-pointer' });
+
+                    const popupHtml = buildRouteVillagesPopupHtml(info, distKm);
+                    polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
+                    polyline.bindTooltip(`<b>Route ${info.route} (${info.ps} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేసి ఈ రూట్‌లోని గ్రామాల లిస్ట్ చూడండి (${(info.stations || []).length} గ్రామాలు)</span>`, { sticky: true, className: 'ps-tooltip-badge' });
+
+                    if (mainRoutesGroup && token === currentMapFilterToken) {
+                        mainRoutesGroup.addLayer(outline);
+                        mainRoutesGroup.addLayer(polyline);
+                    }
+                } else {
+                    drawInstantRouteLine(coords, info, token);
+                }
+            } catch(e) {
+                drawInstantRouteLine(coords, info, token);
+            }
+        }
+
+        // ================= ALL ROUTES DIRECTORY MODAL FUNCTIONS =================
+        function openAllRoutesModal() {
+            const modal = document.getElementById('all-routes-modal');
+            if (modal) modal.classList.remove('hidden');
+            renderRoutesDirectory();
+        }
+
+        function closeAllRoutesModal() {
+            const modal = document.getElementById('all-routes-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function renderRoutesDirectory() {
+            const search = (document.getElementById('routes-modal-search')?.value || '').trim().toLowerCase();
+            const container = document.getElementById('routes-modal-list');
+            if (!container) return;
+
+            const routeMap = {};
+            allStations.forEach(s => {
+                const ps = (s.psname || 'Unknown').trim();
+                const r = (s.route_no || '1').trim();
+                const key = `${ps}___${r}`;
+                if (!routeMap[key]) {
+                    routeMap[key] = {
+                        ps: ps,
+                        route: r,
+                        staff: s.route_staff || '',
+                        staff_ph: s.route_staff_ph_no || '',
+                        stations: []
+                    };
+                }
+                routeMap[key].stations.push(s);
+            });
+
+            const routeKeys = Object.keys(routeMap).sort((a,b) => {
+                if (routeMap[a].ps !== routeMap[b].ps) return routeMap[a].ps.localeCompare(routeMap[b].ps);
+                return routeMap[a].route.localeCompare(routeMap[b].route);
+            });
+
+            const filteredKeys = routeKeys.filter(k => {
+                if (!search) return true;
+                const info = routeMap[k];
+                const psMatch = info.ps.toLowerCase().includes(search);
+                const rMatch = (`route ${info.route}`).toLowerCase().includes(search);
+                const staffMatch = info.staff.toLowerCase().includes(search);
+                const villageMatch = info.stations.some(s => (s.polling_station_location || '').toLowerCase().includes(search));
+                return psMatch || rMatch || staffMatch || villageMatch;
+            });
+
+            const countEl = document.getElementById('routes-modal-count');
+            if (countEl) countEl.innerText = `${filteredKeys.length} Routes`;
+
+            container.innerHTML = '';
+            if (filteredKeys.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs"><i class="fa-solid fa-folder-open text-2xl mb-2"></i><br>ఎలాంటి రూట్లు లేదా గ్రామాలు కనుగొనబడలేదు (No matching routes found).</div>`;
+                return;
+            }
+
+            filteredKeys.forEach(k => {
+                const info = routeMap[k];
+                let totalVoters = 0;
+                info.stations.forEach(st => { totalVoters += (parseInt(st.no_of_voters, 10) || 0); });
+
+                const villagesPreview = info.stations.map((st, i) => `
+                    <span class="inline-block bg-white text-slate-700 px-1.5 py-0.5 rounded text-[10px] border border-slate-200">
+                        ${i+1}. ${st.polling_station_location} (${st.distance_from_ps_kms ? st.distance_from_ps_kms + 'km' : '-'})
+                    </span>
+                `).join(' ');
+
+                container.innerHTML += `
+                    <div class="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-lg border border-slate-200 hover:border-blue-300 transition shadow-xs flex flex-col gap-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 pb-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-blue-600 text-white font-black px-2 py-0.5 rounded text-xs shadow-xs">
+                                    ROUTE ${info.route}
+                                </span>
+                                <h4 class="font-bold text-slate-900 text-xs">${info.ps} Police Station</h4>
+                                ${info.staff ? `<span class="text-[11px] text-slate-600 font-medium">Incharge: ${info.staff}</span>` : ''}
+                            </div>
+                            <button onclick="selectAndZoomRoute('${info.ps}', '${info.route}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded text-xs flex items-center gap-1 shadow-sm transition">
+                                <i class="fa-solid fa-map-location-dot"></i> View on Map
+                            </button>
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-600">
+                            <span class="font-bold text-blue-800"><i class="fa-solid fa-building-flag mr-0.5"></i> ${info.stations.length} Polling Stations</span>
+                            <span>•</span>
+                            <span class="font-bold text-purple-800"><i class="fa-solid fa-users mr-0.5"></i> ${totalVoters.toLocaleString()} Electors</span>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                            ${villagesPreview}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectAndZoomRoute(psName, routeNo) {
+            closeAllRoutesModal();
+            switchTab('map');
+            
+            document.getElementById('map-filter-psname').value = psName;
+            onMapPSChange(psName);
+            
+            setTimeout(() => {
+                document.getElementById('map-filter-route').value = routeNo;
+                applyMapFilters();
+            }, 200);
         }
 
         // ================= TAB 3: POLLING STATIONS REPORT (TABLE) =================
