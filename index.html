@@ -940,8 +940,9 @@
         </div>
     </div>
 
-    <!-- Load Local Stations Dataset directly to prevent any CORS block -->
+    <!-- Load Local Stations Dataset & Precomputed Road Routes Geometry -->
     <script src="data/stations.js"></script>
+    <script src="data/routes_geometry.js"></script>
 
     <!-- Main Application JavaScript Logic -->
     <script>
@@ -1781,14 +1782,47 @@
                 const info = routeStaffInfo[rKey] || {};
                 if (!coords || coords.length < 2) continue;
 
-                if (isManyRoutes) {
-                    // For district-wide view with all routes across Srikakulam, draw all route lines instantly
-                    drawInstantRouteLine(coords, info, token);
-                } else {
-                    // For selected PS or individual route, fetch full OSRM driving geometry
+                // 1. First priority: Check if precomputed true road geometry exists (district-wide road network)
+                if (window.PRECOMPUTED_ROUTES && window.PRECOMPUTED_ROUTES[rKey] && window.PRECOMPUTED_ROUTES[rKey].coordinates) {
+                    drawRoadRouteFromGeometry(window.PRECOMPUTED_ROUTES[rKey].coordinates, window.PRECOMPUTED_ROUTES[rKey].distKm, info, token);
+                    continue;
+                }
+
+                // 2. Fallback: For selected PS or individual route, fetch full OSRM driving geometry live
+                if (!isManyRoutes) {
                     await fetchAndDrawOSRMRoute(coords, info, token);
+                } else {
+                    drawInstantRouteLine(coords, info, token);
                 }
             }
+        }
+
+        function drawRoadRouteFromGeometry(roadCoords, distKm, info, token) {
+            if (token !== currentMapFilterToken || !mainRoutesGroup) return;
+            if (!roadCoords || roadCoords.length < 2) return;
+
+            // Crisp white backing outline for maximum visibility
+            const outline = L.polyline(roadCoords, {
+                color: '#ffffff',
+                weight: 6.5,
+                opacity: 0.9,
+                interactive: false
+            });
+
+            // True police patrol red road driving line
+            const polyline = L.polyline(roadCoords, {
+                color: '#dc2626',
+                weight: 4.5,
+                opacity: 0.95,
+                className: 'cursor-pointer'
+            });
+
+            const popupHtml = buildRouteVillagesPopupHtml(info, distKm);
+            polyline.bindPopup(popupHtml, { maxWidth: 360, minWidth: 280, maxHeight: 440 });
+            polyline.bindTooltip(`<b>Route ${info.route || ''} (${info.ps || ''} PS)</b><br><span style="font-size:10px; color:#1e3a8a;">🖱️ క్లిక్ చేయండి - ${(info.stations || []).length} గ్రామాల జాబితా</span>`, { sticky: true, className: 'ps-tooltip-badge' });
+
+            mainRoutesGroup.addLayer(outline);
+            mainRoutesGroup.addLayer(polyline);
         }
 
         function drawInstantRouteLine(coords, info, token) {
@@ -2499,6 +2533,20 @@
                     </div>
                 `;
             });
+
+            // Check precomputed real road driving geometry first for instant loading
+            const rKey = `${selectedPS}_${selectedRoute}`;
+            if (window.PRECOMPUTED_ROUTES && window.PRECOMPUTED_ROUTES[rKey] && window.PRECOMPUTED_ROUTES[rKey].coordinates) {
+                const pre = window.PRECOMPUTED_ROUTES[rKey];
+                const routeCoords = pre.coordinates;
+                const drivingKm = pre.distKm ? `${pre.distKm} km (Real Road)` : 'Real Road';
+                document.getElementById('route-total-km').innerText = drivingKm;
+
+                L.polyline(routeCoords, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(routeMap);
+                L.polyline(routeCoords, { color: '#dc2626', weight: 6, opacity: 1.0 }).addTo(routeMap);
+                routeMap.fitBounds(routeCoords, { padding: [40, 40] });
+                return;
+            }
 
             // Calculate OSRM Driving Distance & Route Track
             if (latlngs.length >= 2) {
